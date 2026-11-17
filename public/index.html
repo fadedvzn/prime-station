@@ -997,4 +997,473 @@ window.addEventListener("blur",()=>keys.clear());
 const _fw=new THREE.Vector3();
 function driveMe(dt){
   const me=guests.get(myPeer);if(!me||!room)return;const f=me.fig;
-  const fwd=(keys.has("w")||keys.has("arrowup")?1:0)-(keys.has("s")||keys.has("arrowdown")?1:0);
+  const fwd=(keys.has("w")||keys.has("arrowup")?1:0)-(keys.has("s")||keys.has("arrowdown")?1:0);  const rt=(keys.has("d")||keys.has("arrowright")?1:0)-(keys.has("a")||keys.has("arrowleft")?1:0);
+  if(!fwd&&!rt){if(me._driving){me._driving=false;f.moving=false;room.presence({loc:"free",x:+f.pos.x.toFixed(2),z:+f.pos.z.toFixed(2)}).catch(()=>{});}return;}
+  if(!me._driving){me._driving=true;me.tok++;f.queue=[];if(f.onArrive){const r=f.onArrive;f.onArrive=null;r();}
+    if(me.desk!=null){CDESKS[me.desk].scr.color.set(0x0a0e16);me.desk=null;}f.pose="stand";}
+  camera.getWorldDirection(_fw);_fw.y=0;_fw.normalize();
+  const mx=_fw.x*fwd+(-_fw.z)*rt,mz=_fw.z*fwd+_fw.x*rt,L=Math.hypot(mx,mz)||1,sp=2.3*dt;
+  const v=clampDeck(f.pos.x+mx/L*sp,f.pos.z+mz/L*sp);if(canPass(f.pos,v)){f.pos.x=v.x;f.pos.z=v.z;}else{const vx=clampDeck(f.pos.x+mx/L*sp,f.pos.z);const vz=clampDeck(f.pos.x,f.pos.z+mz/L*sp);if(canPass(f.pos,vx)){f.pos.x=vx.x;}else if(canPass(f.pos,vz)){f.pos.z=vz.z;}}
+  f.moving=true;f.phase+=dt*12;f.tHeading=Math.atan2(mx,mz);lastDrive=Date.now();
+  if(focusFig!==f||performance.now()>focusUntil-500){focusFig=f;focusUntil=performance.now()+1500;controls.autoRotate=false;rotBtn.classList.remove("on");}
+  if(Date.now()-lastSend>120){lastSend=Date.now();room.presence({loc:"free",x:+v.x.toFixed(2),z:+v.z.toFixed(2)}).catch(()=>{});}
+}
+
+/* =========================== STATE UPDATES =========================== */
+const stateOn={};
+function updateState(time){
+  refreshSchedule();let on=0;
+  AGENTS.forEach(a=>{const w=isWorking(a),real=realWorking(a);if(w)on++;
+    if(stateOn[a.id]!==w){stateOn[a.id]=w;const old=a.signT;a.signT=signTex(a,w);a.signM.material.map=a.signT;a.signM.material.emissiveMap=a.signT;a.signM.material.needsUpdate=true;old.dispose();
+      a.rim.material.color.set(a.color).multiplyScalar(w?1.1:0.45);a.podLight.intensity=w?6:2;
+      if(w&&real)log(`${nm(a)} clocked in`);}
+    const p=document.getElementById("p-"+a.id);p.className="pill"+(w?(real?" work":" demo"):"");p.style.setProperty("--c",a.color);p.textContent=w?(real?"WORKING":"DEMO"):"BREAK";
+    const {next,last}=cache[a.id];document.getElementById("n-"+a.id).textContent=next?"in "+fmtDur(next-Date.now()):"—";document.getElementById("l-"+a.id).textContent=last?fmtWhen(last):"Not yet";
+  });
+  document.getElementById("h-on").textContent=`${on}/${AGENTS.length}`;document.getElementById("h-rep").textContent=reportCount;
+  document.getElementById("h-clock").textContent=new Date().toLocaleTimeString("en-US",{timeZone:TZ,hour:"numeric",minute:"2-digit"});
+  document.getElementById("hud-status").textContent=on?`${on} CREW ON SHIFT`:"ALL SYSTEMS NOMINAL";
+}
+
+/* =========================== SPACESHIP + HOME PLANET =========================== */
+/* ---- the ship, docked on a pad outside the front of the station ---- */
+const PAD=new THREE.Vector3(0,0,18.5);
+mesh(new THREE.CylinderGeometry(4.2,4.4,.5,48),std(0x3b4357,{metalness:.8,roughness:.3}),PAD.x,-.25,PAD.z);
+const padRing=mesh(new THREE.TorusGeometry(3.6,.05,8,64),new THREE.MeshBasicMaterial({color:0xffb36b}),PAD.x,.03,PAD.z,scene,false);padRing.rotation.x=Math.PI/2;
+mesh(new THREE.BoxGeometry(2,.3,5.4),std(0x4a5266,{metalness:.8,roughness:.35}),0,-.15,14.6);
+function makeShip(){
+  const g=new THREE.Group();const hull=std(0xe9edf4,{metalness:.55,roughness:.3}),dark=std(0x2b3142,{metalness:.8,roughness:.3}),glow=new THREE.MeshBasicMaterial({color:0x7fe3ff});
+  const body=mesh(new THREE.CapsuleGeometry(.9,3.6,8,20),hull,0,1.2,0,g);body.rotation.x=Math.PI/2;
+  const cockpit=new THREE.Mesh(new THREE.SphereGeometry(.78,24,16,0,Math.PI*2,0,Math.PI/2),new THREE.MeshPhysicalMaterial({color:0x7fd6ff,metalness:.2,roughness:.05,transparent:true,opacity:.6,clearcoat:1}));
+  cockpit.position.set(0,1.75,1.1);g.add(cockpit);
+  for(const sx of [-1,1]){const w=mesh(new THREE.BoxGeometry(2.6,.12,1.6),hull,sx*1.8,1.0,-.5,g);w.rotation.z=sx*-.12;mesh(new THREE.BoxGeometry(.3,.5,1.1),dark,sx*2.9,1.2,-.6,g);
+    mesh(new THREE.BoxGeometry(.6,.06,.4),new THREE.MeshBasicMaterial({color:0xffb36b}),sx*2.9,1.48,-.6,g,false);}
+  mesh(new THREE.BoxGeometry(.12,1.1,1.2),hull,0,2.1,-2,g);
+  for(const sx of [-.45,.45]){mesh(new THREE.CylinderGeometry(.35,.42,.6,16),dark,sx,1.1,-2.75,g).rotation.x=Math.PI/2;
+    const f=new THREE.Mesh(new THREE.CircleGeometry(.3,16),glow);f.position.set(sx,1.1,-3.06);f.rotation.y=Math.PI;g.add(f);}
+  for(const [x,z] of [[-.8,1.2],[.8,1.2],[0,-1.8]])mesh(new THREE.CylinderGeometry(.06,.06,.7,8),dark,x,.35,z,g);
+  const flame=new THREE.Mesh(new THREE.ConeGeometry(.35,1.6,16,1,true),new THREE.MeshBasicMaterial({color:0x7fe3ff,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}));
+  flame.rotation.x=-Math.PI/2;flame.position.set(0,1.1,-3.8);g.add(flame);g.userData.flame=flame;
+  return g;}
+const ship=makeShip();ship.position.copy(PAD);ship.rotation.y=Math.PI;scene.add(ship);
+labelSprite("🚀 YOUR SHIP",'#ffb36b',3.6,.75).position.set(PAD.x,4.2,PAD.z);
+
+/* ---- planet scene ---- */
+const planetScene=new THREE.Scene();
+planetScene.environment=scene.environment;
+const skyTex=canvasTex(16,256,(g,w,h)=>{});
+const sky=new THREE.Mesh(new THREE.SphereGeometry(400,32,16),new THREE.MeshBasicMaterial({map:skyTex,side:THREE.BackSide,depthWrite:false,fog:false}));planetScene.add(sky);
+function drawSky(day){const g=skyTex._g,h=256;const gr=g.createLinearGradient(0,0,0,h);
+  const top=day>.5?["#3b2a7a","#7a5ad8"]:["#05040f","#1a1240"],mid=day>.5?"#e48bd6":"#2a1a4a",low=day>.5?"#ffc9a8":"#3a2650";
+  gr.addColorStop(0,day>.5?top[0]:top[0]);gr.addColorStop(.45,top[1]);gr.addColorStop(.52,mid);gr.addColorStop(.6,low);gr.addColorStop(1,low);g.fillStyle=gr;g.fillRect(0,0,16,h);skyTex.needsUpdate=true;}
+const pHemi=new THREE.HemisphereLight(0xd8c8ff,0x2a3a2a,.7);planetScene.add(pHemi);
+const pSun=new THREE.DirectionalLight(0xfff0dd,1.6);pSun.position.set(30,40,20);pSun.castShadow=true;pSun.shadow.mapSize.set(2048,2048);
+Object.assign(pSun.shadow.camera,{left:-30,right:30,top:30,bottom:-30,near:1,far:120});pSun.shadow.camera.updateProjectionMatrix();planetScene.add(pSun);
+planetScene.fog=new THREE.Fog(0x7a5ad8,60,190);
+// distant moons + ringed planet
+const moonA=new THREE.Mesh(new THREE.SphereGeometry(14,32,16),new THREE.MeshBasicMaterial({color:0xf3e3ff,fog:false}));moonA.position.set(-120,90,-260);planetScene.add(moonA);
+const bigPlanet=new THREE.Mesh(new THREE.SphereGeometry(40,48,24),new THREE.MeshBasicMaterial({color:0x6a8cff,fog:false}));bigPlanet.position.set(150,120,-300);planetScene.add(bigPlanet);
+const pring=new THREE.Mesh(new THREE.RingGeometry(52,78,64),new THREE.MeshBasicMaterial({color:0xcfb7ff,transparent:true,opacity:.45,side:THREE.DoubleSide,fog:false}));pring.position.copy(bigPlanet.position);pring.rotation.x=1.2;planetScene.add(pring);
+// ground
+const grassTex=canvasTex(512,512,(g,w,h)=>{g.fillStyle="#3c8a6a";g.fillRect(0,0,w,h);for(let i=0;i<9000;i++){const v=Math.random();g.fillStyle=v<.5?"rgba(90,190,140,.35)":v<.8?"rgba(40,110,90,.4)":"rgba(160,120,220,.25)";g.fillRect(Math.random()*w,Math.random()*h,2,3);}});
+grassTex.wrapS=grassTex.wrapT=THREE.RepeatWrapping;grassTex.repeat.set(30,30);
+const groundGeo=new THREE.PlaneGeometry(400,400,80,80);{const pos=groundGeo.attributes.position;for(let i=0;i<pos.count;i++){const x=pos.getX(i),y=pos.getY(i),r=Math.hypot(x,y);if(r>40){pos.setZ(i,Math.sin(x*.05)*Math.cos(y*.04)*Math.min(14,(r-40)*.12)+Math.max(0,r-90)*.25);}}groundGeo.computeVertexNormals();}
+const ground=new THREE.Mesh(groundGeo,new THREE.MeshStandardMaterial({map:grassTex,roughness:.95}));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;planetScene.add(ground);
+const pmesh=(geo,mat,x,y,z,parent=planetScene,shadow=true)=>mesh(geo,mat,x,y,z,parent,shadow);
+// path stones
+for(let i=0;i<14;i++){pmesh(new THREE.CylinderGeometry(.45,.5,.06,8),std(0x9a94b0,{roughness:.9}),-9+i*.75,.03,2.4-i*.35,planetScene,false);}
+// alien trees + rocks + glow mushrooms
+function alienTree(x,z,s=1){const t=new THREE.Group();t.position.set(x,0,z);t.scale.setScalar(s);planetScene.add(t);
+  pmesh(new THREE.CylinderGeometry(.18,.32,3.2,8),std(0x5a3a7a,{roughness:.8}),0,1.6,0,t);
+  const leaf=std(0x8ef0c8,{roughness:.5,emissive:0x1a6a50,emissiveIntensity:.25});pmesh(new THREE.SphereGeometry(1.3,16,12),leaf,0,3.6,0,t);pmesh(new THREE.SphereGeometry(.9,16,12),leaf,.9,3.1,.3,t);pmesh(new THREE.SphereGeometry(.8,16,12),leaf,-.8,3.2,-.4,t);
+  for(let k=0;k<5;k++)pmesh(new THREE.SphereGeometry(.12,8,8),new THREE.MeshBasicMaterial({color:0xffe27a}),rnd(-1.2,1.2),rnd(2.6,4.4),rnd(-1,1),t,false);}
+[[-18,-14,1.2],[-22,6,1],[16,-16,1.3],[22,12,1.1],[-6,-22,1],[8,20,1.2],[-26,-4,.9],[28,-4,1],[4,-26,1.1],[-14,18,1]].forEach(([x,z,s])=>alienTree(x,z,s));
+for(let i=0;i<26;i++){const a=Math.random()*Math.PI*2,r=rnd(18,44);pmesh(new THREE.DodecahedronGeometry(rnd(.4,1.3),0),std(0x6a6488,{roughness:.9}),Math.cos(a)*r,.3,Math.sin(a)*r);}
+const mushMat=new THREE.MeshStandardMaterial({color:0x7fe3ff,emissive:0x2a9ab8,emissiveIntensity:.8});
+for(let i=0;i<18;i++){const a=Math.random()*Math.PI*2,r=rnd(15,30),m=new THREE.Group();m.position.set(Math.cos(a)*r,0,Math.sin(a)*r);planetScene.add(m);
+  pmesh(new THREE.CylinderGeometry(.06,.08,.5,8),std(0xe8e0ff),0,.25,0,m,false);pmesh(new THREE.SphereGeometry(.28,12,8,0,Math.PI*2,0,Math.PI/2),mushMat,0,.5,0,m,false);}
+// landing pad + parked ship
+const P_PAD=new THREE.Vector3(-12,0,5);
+pmesh(new THREE.CylinderGeometry(3.4,3.6,.25,40),std(0x4a5266,{metalness:.8,roughness:.35}),P_PAD.x,.12,P_PAD.z);
+const pShip=makeShip();pShip.position.copy(P_PAD);pShip.position.y=.25;pShip.rotation.y=.6;planetScene.add(pShip);
+
+/* ---- house (built by you) — upgraded: modern 2-zone home with porch, fireplace, hot tub ---- */
+const HOUSE={x0:-7,x1:7,z0:-12,z1:-2,doorX:1.1};
+const houseG=new THREE.Group();planetScene.add(houseG);
+pmesh(new THREE.BoxGeometry(14.8,.2,10.8),std(0xcfc6b8,{roughness:.8}),0,.1,-7,planetScene);
+const floorIn=pmesh(new THREE.BoxGeometry(13.8,.02,9.8),std(0xa07a52,{roughness:.6}),0,.21,-7,houseG,false);
+const wallM=std(0xf3f0ea,{roughness:.75}),darkW=std(0x2e3340,{roughness:.6,metalness:.3}),glassM=new THREE.MeshPhysicalMaterial({color:0xbfe6ff,transparent:true,opacity:.35,roughness:.05});
+const walls=new THREE.Group();houseG.add(walls);
+function hwall(x0,z0,x1,z1,mat=wallM,h=2.9){const len=Math.hypot(x1-x0,z1-z0);const m=pmesh(new THREE.BoxGeometry(len,h,.22),mat,(x0+x1)/2,h/2,(z0+z1)/2,walls);m.rotation.y=-Math.atan2(z1-z0,x1-x0);}
+hwall(-7,-12,7,-12);hwall(-7,-12,-7,-2,darkW);hwall(7,-12,7,-2,darkW);
+// front: glass panels either side of the door
+hwall(-7,-2,-5.6,-2);hwall(5.6,-2,7,-2);
+for(const [a,b] of [[-5.6,-HOUSE.doorX],[HOUSE.doorX,5.6]]){const g=pmesh(new THREE.BoxGeometry(b-a,2.5,.08),glassM,(a+b)/2,1.35,-2,walls,false);
+  pmesh(new THREE.BoxGeometry(b-a,.12,.24),darkW,(a+b)/2,.06,-2,walls,false);pmesh(new THREE.BoxGeometry(b-a,.12,.24),darkW,(a+b)/2,2.66,-2,walls,false);
+  for(let x=a;x<=b+.01;x+=(b-a)/2)pmesh(new THREE.BoxGeometry(.08,2.6,.1),darkW,x,1.35,-2,walls,false);}
+pmesh(new THREE.BoxGeometry(2.4,.25,.24),darkW,0,2.78,-2,walls);
+// side windows
+for(const [x,z,ry] of [[-7,-5,Math.PI/2],[-7,-9.5,Math.PI/2],[7,-5,Math.PI/2],[7,-9.8,Math.PI/2],[-3,-12,0],[3.5,-12,0]]){const w=pmesh(new THREE.BoxGeometry(1.8,1.2,.26),glassM,x,1.6,z,walls,false);w.rotation.y=ry;}
+// modern flat roof with overhang + solar panels (hidden when you're inside)
+const roof=new THREE.Group();houseG.add(roof);
+pmesh(new THREE.BoxGeometry(15.6,.3,12),std(0x3a3f4c,{roughness:.5,metalness:.4}),0,3.05,-6.6,roof);
+pmesh(new THREE.BoxGeometry(15.7,.08,12.1),std(0xffb36b,{emissive:0xffb36b,emissiveIntensity:.5}),0,2.88,-6.6,roof,false);
+for(let i=0;i<3;i++)for(let j=0;j<2;j++){const p=pmesh(new THREE.BoxGeometry(3.4,.08,2),std(0x14244a,{metalness:.7,roughness:.25}),-4.5+i*4.5,3.35,-9+j*2.6,roof,false);p.rotation.x=-.25;}
+// porch deck, string lights, lounge chairs, mailbox
+pmesh(new THREE.BoxGeometry(9,.16,3),std(0x8a6a4a,{roughness:.7}),0,.08,-.4,planetScene);
+for(const sx of [-1,1]){pmesh(new THREE.BoxGeometry(.12,2.6,.12),darkW,sx*4.3,1.3,1,planetScene);}
+const bulbMat=new THREE.MeshStandardMaterial({color:0xffe2b0,emissive:0xffc070,emissiveIntensity:1.2});
+for(let i=0;i<=12;i++){const x=-4.3+i*8.6/12;pmesh(new THREE.SphereGeometry(.07,8,8),bulbMat,x,2.5-Math.sin(i/12*Math.PI)*.35,1,planetScene,false);}
+for(const sx of [-3,3]){const c=new THREE.Group();c.position.set(sx,.16,.1);c.rotation.y=Math.PI;planetScene.add(c);pmesh(new THREE.BoxGeometry(.7,.12,1.5),std(0xffffff,{roughness:.7}),0,.32,0,c);pmesh(new THREE.BoxGeometry(.7,.6,.12),std(0xffffff,{roughness:.7}),0,.55,-.7,c).rotation.x=-.4;}
+const mail=new THREE.Group();mail.position.set(-5.5,0,3.2);planetScene.add(mail);pmesh(new THREE.CylinderGeometry(.05,.05,1,8),darkW,0,.5,0,mail);pmesh(new THREE.BoxGeometry(.35,.3,.55),std(0x7a5ad8),0,1.1,0,mail);
+const homeSign=new THREE.Sprite(new THREE.SpriteMaterial({map:canvasTex(512,128,(g,w,h)=>{g.fillStyle="rgba(20,14,40,.85)";g.fillRect(0,0,w,h);g.strokeStyle="#ffd166";g.lineWidth=6;g.strokeRect(4,4,w-8,h-8);g.fillStyle="#ffd166";g.font="800 52px Orbitron, Arial";g.textAlign="center";g.textBaseline="middle";g.fillText("JASON'S HOUSE",w/2,h/2);}),transparent:true,depthWrite:false}));
+homeSign.position.set(0,4.4,-1.6);homeSign.scale.set(4,1,1);houseG.add(homeSign);
+for(let i=0;i<6;i++){const l=new THREE.Group();l.position.set(-1.1+(i%2)*2.2,0,1.6+Math.floor(i/2)*1.6);planetScene.add(l);pmesh(new THREE.CylinderGeometry(.05,.07,.6,8),darkW,0,.3,0,l,false);pmesh(new THREE.SphereGeometry(.1,8,8),bulbMat,0,.65,0,l,false);}
+// hot tub on the west lawn
+const tub=new THREE.Group();tub.position.set(-10.5,0,-8);planetScene.add(tub);pmesh(new THREE.CylinderGeometry(1.6,1.7,.8,32),std(0x8a6a4a,{roughness:.6}),0,.4,0,tub);
+const water=pmesh(new THREE.CylinderGeometry(1.4,1.4,.05,32),new THREE.MeshStandardMaterial({color:0x5fd6ff,emissive:0x1a8ab8,emissiveIntensity:.8,transparent:true,opacity:.85}),0,.78,0,tub,false);
+// --- interior: living room (front-left)
+const couchL=new THREE.Group();couchL.position.set(-4.4,0,-4.2);couchL.rotation.y=Math.PI/2;houseG.add(couchL);const cm2=std(0x3b4a6b,{roughness:.85});
+pmesh(new THREE.BoxGeometry(2.6,.45,.9),cm2,0,.25,0,couchL);pmesh(new THREE.BoxGeometry(2.6,.7,.22),cm2,0,.6,-.42,couchL);pmesh(new THREE.BoxGeometry(.9,.45,1.6),cm2,1.3,.25,.35,couchL);
+pmesh(new THREE.CylinderGeometry(2,2,.02,40),std(0x6a4a8a,{roughness:.95}),-3.2,.23,-4.4,houseG,false);
+pmesh(new THREE.BoxGeometry(1.2,.35,.7),std(0x5a3a2a,{roughness:.6}),-2.7,.38,-4.4,houseG);
+const tvH=new THREE.Mesh(new THREE.PlaneGeometry(2.4,1.35),new THREE.MeshBasicMaterial({map:tvTex,toneMapped:false}));tvH.position.set(-.9,1.5,-4.4);tvH.rotation.y=-Math.PI/2;houseG.add(tvH);
+pmesh(new THREE.BoxGeometry(.1,1.45,2.5),std(0x111317,{metalness:.6}),-.84,1.5,-4.4,houseG,false);pmesh(new THREE.BoxGeometry(.6,.5,2.2),std(0x2e3340),-.7,.25,-4.4,houseG);
+// fireplace on the west wall
+const fire=new THREE.Group();fire.position.set(-6.75,0,-7.4);fire.rotation.y=Math.PI/2;houseG.add(fire);
+pmesh(new THREE.BoxGeometry(2,1.6,.4),std(0x5a5f6b,{roughness:.8}),0,.8,0,fire);pmesh(new THREE.BoxGeometry(1.2,.7,.1),std(0x111111),0,.55,.18,fire,false);
+const flames=pmesh(new THREE.ConeGeometry(.35,.55,8),new THREE.MeshBasicMaterial({color:0xff8a3a}),0,.45,.15,fire,false);
+const fireLight=new THREE.PointLight(0xff8a3a,0,6,2);fireLight.position.set(0,.8,.6);fire.add(fireLight);
+// --- kitchen (back-left) with island
+pmesh(new THREE.BoxGeometry(5,.9,.75),std(0xe6e1d8,{roughness:.5}),-3.6,.65,-11.45,houseG);
+pmesh(new THREE.BoxGeometry(5.1,.06,.8),std(0x2b2b30,{roughness:.3}),-3.6,1.12,-11.45,houseG);
+const burner=pmesh(new THREE.CylinderGeometry(.2,.2,.02,20),new THREE.MeshStandardMaterial({color:0x222222,emissive:0xff5a2a,emissiveIntensity:0}),-2.4,1.16,-11.45,houseG,false);
+pmesh(new THREE.CylinderGeometry(.2,.2,.02,20),std(0x222222),-3.2,1.16,-11.45,houseG,false);
+pmesh(new THREE.CylinderGeometry(.18,.16,.2,16),std(0x9aa3b8,{metalness:.8,roughness:.3}),-2.4,1.28,-11.45,houseG,false);
+pmesh(new THREE.BoxGeometry(1,2.1,.8),std(0xdfe5ee,{metalness:.4,roughness:.3}),-6.3,1.25,-11.4,houseG);
+pmesh(new THREE.BoxGeometry(2.6,.95,1),std(0x2e3340,{roughness:.5}),-3.6,.67,-9.3,houseG);pmesh(new THREE.BoxGeometry(2.7,.06,1.1),std(0xe8e2d8,{roughness:.3}),-3.6,1.17,-9.3,houseG);
+for(const sx of [-.8,.8]){const st=new THREE.Group();st.position.set(-3.6+sx,0,-8.4);houseG.add(st);pmesh(new THREE.CylinderGeometry(.2,.2,.06,16),std(0xb26a3a),0,.75,0,st,false);pmesh(new THREE.CylinderGeometry(.04,.04,.72,8),darkW,0,.37,0,st,false);}
+// --- dining (center)
+pmesh(new THREE.BoxGeometry(1.8,.06,1),std(0x8a5a3a,{roughness:.6}),.6,.78,-7.2,houseG);pmesh(new THREE.BoxGeometry(.12,.75,.12),darkW,.6,.4,-7.2,houseG);
+makeChair(houseG,.6,-8.1,0,0x8a5a3a);makeChair(houseG,.6,-6.3,Math.PI,0x8a5a3a);
+// --- bedroom (back-right): big bed, nightstands, lamps, wardrobe, plant
+pmesh(new THREE.BoxGeometry(2.6,.5,3.2),std(0x5a4a7a,{roughness:.8}),4.6,.45,-10,houseG);
+pmesh(new THREE.BoxGeometry(2.8,1.4,.2),std(0x3b2f5c,{roughness:.7}),4.6,1,-11.65,houseG);
+pmesh(new THREE.BoxGeometry(2.5,.2,3),std(0xf3eef8,{roughness:.9}),4.6,.8,-10,houseG);
+pmesh(new THREE.BoxGeometry(2.4,.14,1.8),std(0x7fb8ff,{roughness:.9}),4.6,.92,-9.3,houseG);
+for(const sx of [-.6,.6])pmesh(new THREE.BoxGeometry(.8,.18,.45),std(0xffffff,{roughness:.9}),4.6+sx,.95,-11.2,houseG);
+const lamps=[];for(const sx of [-1.9,1.9]){pmesh(new THREE.BoxGeometry(.6,.6,.5),std(0x5a3a2a),4.6+sx,.3,-11.3,houseG);
+  pmesh(new THREE.CylinderGeometry(.16,.22,.36,16),new THREE.MeshStandardMaterial({color:0xffe2b0,emissive:0xffc070,emissiveIntensity:.6}),4.6+sx,.8,-11.3,houseG,false);}
+const lampL=new THREE.PointLight(0xffd29a,0,7,2);lampL.position.set(4.6,1.6,-10.8);houseG.add(lampL);
+pmesh(new THREE.BoxGeometry(.7,2.2,1.6),std(0x6a4a3a,{roughness:.7}),6.5,1.1,-6.8,houseG);
+pmesh(new THREE.CylinderGeometry(2.1,2.1,.02,40),std(0x7a5ad8,{roughness:.95}),4.4,.23,-8.6,houseG,false);
+// pet bed + bowl (front-right)
+pmesh(new THREE.TorusGeometry(.5,.18,8,20),std(0x7fe3d6,{roughness:.9}),5.4,.35,-3.2,houseG).rotation.x=Math.PI/2;
+const bowl=pmesh(new THREE.CylinderGeometry(.25,.2,.12,16),std(0xff9f43,{roughness:.4}),3.8,.28,-2.9,houseG,false);
+for(const [x,z] of [[-6.4,-2.6],[6.5,-11.4],[-.6,-11.5]]){const p=plant(x,z,1.1,houseG);}
+const houseLight=new THREE.PointLight(0xffe2c0,0,18,1.5);houseLight.position.set(0,2.6,-7);houseG.add(houseLight);
+const SPOTS={stove:new THREE.Vector3(-2.6,0,-10.6),fridge:new THREE.Vector3(-6,0,-10.4),table:new THREE.Vector3(.6,0,-8.1),bed:new THREE.Vector3(2.9,0,-10),bowl:new THREE.Vector3(3.6,0,-3.6),
+  couch:new THREE.Vector3(-4.3,0,-4.3),fire:new THREE.Vector3(-5.6,0,-7.4),tub:new THREE.Vector3(-8.6,0,-8),
+  doorOut:new THREE.Vector3(0,0,-.9),doorIn:new THREE.Vector3(0,0,-3.1),ship:new THREE.Vector3(-9.2,0,4.2),site:new THREE.Vector3(0,0,-.9)};
+
+/* ---- farm ---- */
+const CROPS={berry:{name:"Star berries",icon:"🫐",color:0x6a7bff},carrot:{name:"Moon carrots",icon:"🥕",color:0xff9f43},melon:{name:"Glow melons",icon:"🍈",color:0x9cff7a}};
+const PLOTS=[];
+[11,13.2,15.4].forEach((x,i)=>[-1.4,.8,3].forEach((z,j)=>{
+  const soil=pmesh(new THREE.BoxGeometry(1.8,.18,1.8),std(0x5a3a2a,{roughness:1}),x,.09,z,planetScene,false);
+  const plant=new THREE.Group();plant.position.set(x,.18,z);planetScene.add(plant);
+  const stem=pmesh(new THREE.ConeGeometry(.35,.9,8),std(0x5ad88a,{roughness:.7}),0,.45,0,plant,false);
+  const fruit=[0,1,2].map(k=>pmesh(new THREE.SphereGeometry(.14,10,8),new THREE.MeshStandardMaterial({color:0xffffff,emissive:0xffffff,emissiveIntensity:.4}),Math.cos(k*2.1)*.25,.55+k*.12,Math.sin(k*2.1)*.25,plant,false));
+  const drop=pmesh(new THREE.SphereGeometry(.09,8,8),new THREE.MeshBasicMaterial({color:0x7fd6ff}),0,1.3,0,plant,false);
+  PLOTS.push({x,z,soil,plant,stem,fruit,drop,state:null});}));
+pmesh(new THREE.BoxGeometry(7.6,.5,.1),std(0x8a6a4a),13.2,.4,-2.7);pmesh(new THREE.BoxGeometry(7.6,.5,.1),std(0x8a6a4a),13.2,.4,4.3);
+pmesh(new THREE.BoxGeometry(.1,.5,7),std(0x8a6a4a),9.4,.4,.8);pmesh(new THREE.BoxGeometry(.1,.5,7),std(0x8a6a4a),17,.4,.8);
+const farmSign=new THREE.Sprite(new THREE.SpriteMaterial({map:canvasTex(512,128,(g,w,h)=>{g.fillStyle="rgba(40,24,14,.85)";g.fillRect(0,0,w,h);g.fillStyle="#ffe2b0";g.font="800 54px Inter, Arial";g.textAlign="center";g.textBaseline="middle";g.fillText("🌱 MY FARM",w/2,h/2);}),transparent:true,depthWrite:false}));
+farmSign.position.set(13.2,2.4,-3);farmSign.scale.set(3,.75,1);planetScene.add(farmSign);
+const GROW_MS=90000;
+
+/* ---- pet: a little alien ---- */
+function makeDog(){const g=new THREE.Group();planetScene.add(g);
+  const skin=std(0x7ee08a,{roughness:.55,emissive:0x0e3a18,emissiveIntensity:.25}),belly=std(0xc8f7c0,{roughness:.6}),suit=std(0x8a6bff,{roughness:.5}),eyeM=new THREE.MeshPhysicalMaterial({color:0x05060a,roughness:.05,clearcoat:1});
+  const body=new THREE.Group();body.position.y=.42;g.add(body);
+  pmesh(new THREE.SphereGeometry(.22,16,12),suit,0,0,0,body).scale.set(1,1.15,.9);
+  pmesh(new THREE.SphereGeometry(.11,12,10),belly,0,-.02,.17,body,false);
+  pmesh(new THREE.TorusGeometry(.2,.03,8,20),new THREE.MeshBasicMaterial({color:0x7fe3ff}),0,-.12,0,body,false).rotation.x=Math.PI/2;
+  const head=new THREE.Group();head.position.set(0,.88,0);g.add(head);
+  pmesh(new THREE.SphereGeometry(.3,20,16),skin,0,0,0,head).scale.set(1.12,1,1);
+  pmesh(new THREE.SphereGeometry(.17,16,12),skin,0,-.17,.08,head,false).scale.set(1,.8,1);
+  for(const sx of [-1,1]){const e=pmesh(new THREE.SphereGeometry(.11,16,12),eyeM,sx*.13,.02,.24,head,false);e.scale.set(1,1.35,.6);e.rotation.z=sx*-.35;
+    pmesh(new THREE.SphereGeometry(.03,8,8),new THREE.MeshBasicMaterial({color:0xffffff}),sx*.11,.08,.31,head,false);}
+  pmesh(new THREE.TorusGeometry(.05,.012,6,16,Math.PI),new THREE.MeshBasicMaterial({color:0x1a3a1a}),0,-.2,.24,head,false).rotation.z=Math.PI;
+  const ants=new THREE.Group();ants.position.set(0,.26,0);head.add(ants);
+  for(const sx of [-1,1]){const a=pmesh(new THREE.CylinderGeometry(.012,.012,.32,6),skin,sx*.1,.14,0,ants,false);a.rotation.z=-sx*.35;
+    pmesh(new THREE.SphereGeometry(.045,10,8),new THREE.MeshBasicMaterial({color:0xffe27a}),sx*.16,.3,0,ants,false);}
+  const legs=[];for(const sx of [-1,1]){const l=new THREE.Group();l.position.set(sx*.1,.3,0);g.add(l);pmesh(new THREE.CapsuleGeometry(.055,.16,4,8),skin,0,-.13,0,l);pmesh(new THREE.SphereGeometry(.07,10,8),suit,0,-.27,.03,l,false).scale.set(1,.6,1.4);legs.push(l);}
+  const arms=[];for(const sx of [-1,1]){const a=new THREE.Group();a.position.set(sx*.21,.5,0);g.add(a);const m=pmesh(new THREE.CapsuleGeometry(.04,.16,4,8),skin,0,-.11,0,a);a.rotation.z=sx*.4;arms.push(a);}
+  const hover=pmesh(new THREE.CircleGeometry(.3,24),new THREE.MeshBasicMaterial({color:0x7fe3ff,transparent:true,opacity:.25,depthWrite:false}),0,.02,0,g,false);hover.rotation.x=-Math.PI/2;
+  const tagEl=document.createElement("div");tagEl.className="tag3d";tagEl.style.setProperty("--c","#7ee08a");const tagO=new CSS2DObject(tagEl);tagO.position.set(0,1.55,0);g.add(tagO);
+  const bw=document.createElement("div");const bub=document.createElement("div");bub.className="bub";bw.append(bub);const bo=new CSS2DObject(bw);bo.position.set(0,1.95,0);g.add(bo);
+  return{g,head,legs,arms,tail:ants,tagEl,bub,pos:g.position,heading:0,target:null,speed:2.4,phase:0,mode:"idle",modeT:0};}
+const dog=makeDog();dog.pos.set(3,0,1);
+const ball=pmesh(new THREE.SphereGeometry(.13,12,10),new THREE.MeshStandardMaterial({color:0xffe27a,emissive:0xffb000,emissiveIntensity:.5}),0,-5,0,planetScene,false);
+function dogSay(t,ms=2400){dog.bub.textContent=t;dog.bub.classList.add("show");clearTimeout(dog._bt);dog._bt=setTimeout(()=>dog.bub.classList.remove("show"),ms);}
+
+/* ---- player on the planet ---- */
+let planetMode=false,pPlayer=null,pDriving=false;
+const pKeys=keys; // shared keyboard set
+const PLANET_KEY="ps-planet-v1";
+const DEF_STATE={built:false,buildStart:0,dogName:"Wall-E",me:{hunger:80,energy:90},pet:{hunger:70,happy:70,energy:80},inv:{seeds:6,berry:0,carrot:0,melon:0,meal:0,treat:0},seedType:"berry",
+  plots:Array(9).fill(null),time:8*60,savedAt:Date.now()};
+let PS;try{PS=Object.assign(structuredClone(DEF_STATE),JSON.parse(localStorage.getItem(PLANET_KEY)||"null")||{});}catch(e){PS=structuredClone(DEF_STATE);}
+if(!Array.isArray(PS.plots)||PS.plots.length!==9)PS.plots=Array(9).fill(null);
+if(!PS.dogName||PS.dogName==="Nova")PS.dogName="Wall-E";
+{ // gentle offline decay (at most 6 hours' worth, never below 15)
+  const mins=Math.min(360,Math.max(0,(Date.now()-(PS.savedAt||Date.now()))/60000));
+  const dec=(o,k,r)=>{o[k]=Math.max(15,Math.min(100,o[k]-r*mins/6));};
+  dec(PS.pet,"hunger",1.2);dec(PS.pet,"happy",.9);dec(PS.me,"hunger",1);}
+let saveT=0;function savePlanet(){PS.savedAt=Date.now();try{localStorage.setItem(PLANET_KEY,JSON.stringify(PS));}catch(e){}}
+dog.tagEl.textContent="👽 "+String(PS.dogName||"Wall-E").toUpperCase();
+
+/* ---- HUD ---- */
+const hud=document.createElement("div");hud.id="planet-hud";hud.innerHTML=`
+  <div class="ph-top"><div class="ph-card" id="ph-stats"></div><div class="ph-card" id="ph-inv"></div></div>
+  <div class="ph-msg" id="ph-msg"></div>
+  <div class="ph-actions" id="ph-actions"></div>
+  <div class="ph-help">WASD / arrows to walk · click the ground to move · <b>E</b> = main action</div>`;
+view.appendChild(hud);
+const pst=document.createElement("style");pst.textContent=`
+  #planet-hud{position:absolute;inset:0;pointer-events:none;z-index:6;display:none;font-family:Inter,sans-serif}
+  #planet-hud .ph-top{position:absolute;left:12px;top:56px;display:flex;flex-direction:column;gap:8px;max-width:230px}
+  .ph-card{pointer-events:auto;background:#0b0e17d9;border:1px solid #2b3352;border-radius:12px;padding:9px 11px;font-size:12px;color:#e8ecf6;backdrop-filter:blur(6px)}
+  .ph-card h4{margin:0 0 6px;font:800 10px Orbitron,sans-serif;letter-spacing:1.5px;color:#bfa8ff}
+  .bar{display:flex;align-items:center;gap:6px;margin:3px 0}.bar span{width:62px;color:#b9c0d6;font-size:11px}
+  .bar i{flex:1;height:7px;border-radius:5px;background:#1d2234;overflow:hidden;position:relative}.bar i b{position:absolute;inset:0 auto 0 0;border-radius:5px}
+  .inv{display:flex;flex-wrap:wrap;gap:5px}.inv em{font-style:normal;background:#151a28;border-radius:7px;padding:3px 6px}
+  .ph-card select,.ph-card input{font:12px Inter;background:#151a28;color:#e8ecf6;border:1px solid #2b3352;border-radius:6px;padding:3px 5px;margin-top:6px;width:100%}
+  #planet-hud .ph-actions{position:absolute;left:50%;bottom:42px;transform:translateX(-50%);display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:92%}
+  .ph-actions button{pointer-events:auto;font:700 13px Inter;padding:9px 14px;border-radius:999px;border:1px solid #bfa8ff;background:#140f26e6;color:#efe6ff;cursor:pointer;box-shadow:0 0 14px #8a6bff55}
+  .ph-actions button:hover{background:#bfa8ff;color:#140f26}
+  .ph-actions button.main{border-color:#ffd166;color:#ffd166}
+  #planet-hud .ph-msg{position:absolute;left:50%;top:60px;transform:translateX(-50%);font:700 14px Inter;color:#fff;background:#140f26e6;border:1px solid #bfa8ff;padding:8px 16px;border-radius:999px;opacity:0;transition:.3s}
+  #planet-hud .ph-msg.show{opacity:1}
+  #planet-hud .ph-help{position:absolute;left:12px;bottom:12px;font-size:11px;color:#d9ccff;text-shadow:0 0 6px #000}
+  #fade{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .8s;z-index:8}
+  #fade.on{opacity:1}`;
+document.head.appendChild(pst);
+const fadeEl=document.createElement("div");fadeEl.id="fade";view.appendChild(fadeEl);
+let msgT;function pMsg(t,ms=2600){const m=document.getElementById("ph-msg");m.textContent=t;m.classList.add("show");clearTimeout(msgT);msgT=setTimeout(()=>m.classList.remove("show"),ms);}
+const barHTML=(label,v,c)=>`<div class="bar"><span>${label}</span><i><b style="width:${Math.round(v)}%;background:${c}"></b></i></div>`;
+function renderHUD(){
+  const tod=PS.time%1440,hh=Math.floor(tod/60),mm=Math.floor(tod%60);
+  document.getElementById("ph-stats").innerHTML=`<h4>YOU · ${((hh+11)%12)+1}:${String(mm).padStart(2,"0")} ${hh<12?"AM":"PM"}</h4>${barHTML("Energy",PS.me.energy,"#7fe3ff")}${barHTML("Food",PS.me.hunger,"#ffd166")}
+    <h4 style="margin-top:8px" id="ph-dogh"></h4>${barHTML("Food",PS.pet.hunger,"#ff9f43")}${barHTML("Happy",PS.pet.happy,"#ff6bcb")}${barHTML("Energy",PS.pet.energy,"#9cff7a")}
+    <input id="ph-dogname" maxlength="14" placeholder="Name your little alien">`;
+  document.getElementById("ph-dogh").textContent="👽 "+PS.dogName;
+  const n=document.getElementById("ph-dogname");n.value=PS.dogName;n.onchange=()=>{PS.dogName=clean(n.value,14).trim()||"Wall-E";dog.tagEl.textContent="👽 "+PS.dogName.toUpperCase();savePlanet();renderHUD();};
+  const iv=PS.inv;document.getElementById("ph-inv").innerHTML=`<h4>BACKPACK</h4><div class="inv"><em>🌰 ${iv.seeds} seeds</em><em>🫐 ${iv.berry}</em><em>🥕 ${iv.carrot}</em><em>🍈 ${iv.melon}</em><em>🍲 ${iv.meal} meals</em><em>🍪 ${iv.treat} snacks</em></div>
+    <select id="ph-seed">${Object.entries(CROPS).map(([k,c])=>`<option value="${k}" ${PS.seedType===k?"selected":""}>Plant: ${c.icon} ${c.name}</option>`).join("")}</select>`;
+  document.getElementById("ph-seed").onchange=e=>{PS.seedType=e.target.value;savePlanet();};
+}
+let hudT=0;
+
+/* ---- world helpers ---- */
+const inHouse=v=>v.x>HOUSE.x0&&v.x<HOUSE.x1&&v.z>HOUSE.z0&&v.z<HOUSE.z1;
+function pCanPass(o,n){if(!PS.built)return true;const a=inHouse(o),b=inHouse(n);if(a===b)return true;return Math.abs(n.x)<HOUSE.doorX-.15&&Math.abs(n.z-HOUSE.z1)<.6;}
+function pRoute(p,q){if(!PS.built)return[q.clone()];const a=inHouse(p),b=inHouse(q);if(a===b)return[q.clone()];return a?[SPOTS.doorIn.clone(),SPOTS.doorOut.clone(),q.clone()]:[SPOTS.doorOut.clone(),SPOTS.doorIn.clone(),q.clone()];}
+function pWalk(f,target,speed=2){return new Promise(res=>{if(f.onArrive){const r=f.onArrive;f.onArrive=null;r();}f.queue=pRoute(f.pos.clone(),target.clone());f.speed=speed;f.onArrive=res;f.moving=true;f.pose="stand";});}
+function updatePlots(){const now=Date.now();PLOTS.forEach((p,i)=>{const s=PS.plots[i];
+  if(!s){p.plant.visible=false;p.drop.visible=false;p.soil.material.color.set(0x5a3a2a);return;}
+  p.plant.visible=true;const g=s.w?Math.min(1,(now-s.w)/GROW_MS):0;s.g=g;
+  p.soil.material.color.set(s.w?0x3a2418:0x6a4a32);p.drop.visible=!s.w;p.drop.position.y=1.2+Math.sin(now/300)*.08;
+  const sc=.25+g*.75;p.stem.scale.set(sc,sc,sc);p.stem.position.y=.45*sc;
+  p.fruit.forEach(f=>{f.visible=g>=1;f.material.color.set(CROPS[s.c].color);f.material.emissive.set(CROPS[s.c].color);});});}
+function nearestPlot(v){let best=-1,bd=1.5;PLOTS.forEach((p,i)=>{const d=Math.hypot(v.x-p.x,v.z-p.z);if(d<bd){bd=d;best=i;}});return best;}
+
+/* ---- actions ---- */
+let busy=false;
+async function act(id){
+  if(busy||!pPlayer)return;const f=pPlayer;busy=true;
+  try{
+  if(id==="build"){PS.built=true;PS.buildStart=Date.now();savePlanet();pMsg("🏗️ Building your house…",3000);f.pose="type";await wait(3200);f.pose="stand";pMsg("🏠 Your house is built! Walk in through the front door.",3600);}
+  else if(id==="plant"){const i=nearestPlot(f.pos);if(i<0||PS.plots[i])return;if(PS.inv.seeds<1){pMsg("No seeds left — harvest crops to get more.");return;}
+    PS.inv.seeds--;PS.plots[i]={c:PS.seedType,t:Date.now(),w:0};f.pose="type";await wait(900);f.pose="stand";pMsg(`🌱 Planted ${CROPS[PS.seedType].name}. Water it!`);}
+  else if(id==="water"){const i=nearestPlot(f.pos);if(i<0||!PS.plots[i]||PS.plots[i].w)return;PS.plots[i].w=Date.now();f.pose="sip";await wait(900);f.pose="stand";pMsg("💧 Watered. It'll be ready in about a minute and a half.");}
+  else if(id==="harvest"){const i=nearestPlot(f.pos);const s=PS.plots[i];if(i<0||!s||(s.g||0)<1)return;PS.inv[s.c]+=2;PS.inv.seeds+=2;PS.plots[i]=null;f.pose="type";await wait(800);f.pose="stand";pMsg(`🧺 +2 ${CROPS[s.c].name} and +2 seeds`);}
+  else if(id==="cook"){const tot=PS.inv.berry+PS.inv.carrot+PS.inv.melon;if(tot<2){pMsg("You need 2 crops to cook a meal. Go farm!");return;}
+    let need=2;for(const k of ["carrot","melon","berry"])while(need&&PS.inv[k]>0){PS.inv[k]--;need--;}f.pose="type";burner.material.emissiveIntensity=2;pMsg("🍳 Cooking…");await wait(2500);burner.material.emissiveIntensity=0;f.pose="stand";PS.inv.meal++;pMsg("🍲 Space stew is ready!");}
+  else if(id==="treat"){const k=["berry","carrot","melon"].find(k=>PS.inv[k]>0);if(!k){pMsg("You need 1 crop to make an alien snack.");return;}PS.inv[k]--;f.pose="type";await wait(1200);f.pose="stand";PS.inv.treat++;pMsg(`🍪 Made a snack for ${PS.dogName}`);}
+  else if(id==="eat"){if(PS.inv.meal<1){pMsg("No meals — cook something at the stove.");return;}PS.inv.meal--;PS.me.hunger=Math.min(100,PS.me.hunger+45);f.pose="sip";say(f,"Mmm, space stew 😋",2200);await wait(2200);f.pose="stand";}
+  else if(id==="fridge"){pMsg(`🧊 Fridge: 🫐 ${PS.inv.berry} · 🥕 ${PS.inv.carrot} · 🍈 ${PS.inv.melon} · 🍲 ${PS.inv.meal}`,3200);}
+  else if(id==="sleep"){f.pose="stand";await pWalk(f,SPOTS.bed);f.root.rotation.z=0;faceTo(f,Math.PI/2);f.pose="sit";fadeEl.classList.add("on");await wait(1100);
+    const dayN=Math.floor(PS.time/1440),tod0=PS.time%1440;PS.time=(tod0<7*60?dayN:dayN+1)*1440+7*60;
+    PS.me.energy=100;PS.pet.energy=100;PS.me.hunger=Math.max(10,PS.me.hunger-10);PS.pet.hunger=Math.max(10,PS.pet.hunger-10);dog.pos.set(3.6,0,-3.2);
+    await wait(900);fadeEl.classList.remove("on");f.pose="stand";pMsg("☀️ Good morning! You and "+PS.dogName+" are fully rested.",3400);}
+  else if(id==="feed"){let used=null;if(PS.inv.treat>0){PS.inv.treat--;used="treat";PS.pet.hunger=Math.min(100,PS.pet.hunger+35);PS.pet.happy=Math.min(100,PS.pet.happy+10);}
+    else{const k=["berry","carrot","melon"].find(k=>PS.inv[k]>0);if(k){PS.inv[k]--;used=k;PS.pet.hunger=Math.min(100,PS.pet.hunger+18);}}
+    if(!used){pMsg(`Nothing to feed ${PS.dogName} — make a snack or harvest a crop.`);return;}
+    dog.mode="eat";dog.modeT=2.2;dogSay("nom nom nom 😋");pMsg(`${PS.dogName} loved it!`);}
+  else if(id==="pet"){PS.pet.happy=Math.min(100,PS.pet.happy+15);dog.mode="wag";dog.modeT=2;dogSay("💚 bloop bloop 💚");faceToward(f,dog.pos);f.pose="wave";await wait(1200);f.pose="stand";}
+  else if(id==="play"){if(PS.pet.energy<15){dogSay("😴 too tired…");pMsg(`${PS.dogName} is tired. Let them nap or sleep.`);return;}
+    const a=f.heading,dist=rnd(6,9);const land=new THREE.Vector3(f.pos.x+Math.sin(a)*dist,0,f.pos.z+Math.cos(a)*dist);if(PS.built&&inHouse(land)!==inHouse(f.pos)){pMsg("Go outside to play catch!");return;}
+    f.pose="wave";ballThrow={from:f.pos.clone().setY(1.4),to:land,t:0};dog.mode="fetch";dog.target=land;dogSay("!!! ✨");await wait(600);f.pose="stand";
+    PS.pet.happy=Math.min(100,PS.pet.happy+20);PS.pet.energy=Math.max(0,PS.pet.energy-10);}
+  else if(id==="call"){dog.mode="come";dogSay("👽 coming!");}
+  else if(id==="ship"){await leavePlanet();}
+  else if(id==="tub"){await pWalk(f,SPOTS.tub);faceTo(f,Math.PI/2);f.pose="sit";say(f,"Ahhh… 🛁",2400);await wait(3500);PS.me.energy=Math.min(100,PS.me.energy+15);f.pose="stand";pMsg("🛁 Relaxed. +15 energy");}
+  else if(id==="tv"){await pWalk(f,SPOTS.couch);faceTo(f,Math.PI/2);f.pose="sit";say(f,"📺 Earth cam is on",2400);dog.mode="come";await wait(4000);PS.me.energy=Math.min(100,PS.me.energy+8);PS.pet.happy=Math.min(100,PS.pet.happy+8);f.pose="stand";pMsg(`📺 Chilled with ${PS.dogName}. +8 energy, +8 happy`);}
+  else if(id==="fire"){faceTo(f,-Math.PI/2);say(f,"🔥 cozy",2200);await wait(2500);PS.me.energy=Math.min(100,PS.me.energy+5);pMsg("🔥 Warm and cozy. +5 energy");}
+  }finally{busy=false;savePlanet();renderHUD();}
+}
+let ballThrow=null;
+const ACTIONS={build:"🏗️ Build my house",plant:"🌱 Plant",water:"💧 Water",harvest:"🧺 Harvest",cook:"🍳 Cook a meal",treat:"🍪 Make alien snack",eat:"🍽️ Eat a meal",fridge:"🧊 Check fridge",
+  sleep:"🛏️ Go to sleep",feed:"🍖 Feed",pet:"🤚 Pet",play:"✨ Play catch",call:"📣 Call",ship:"🚀 Fly back to station",tub:"🛁 Relax in hot tub",tv:"📺 Watch TV",fire:"🔥 Warm up by the fire"};
+let lastActs="";
+function contextActions(){
+  const v=pPlayer.pos,list=[];
+  if(!PS.built&&v.distanceTo(SPOTS.site)<4)list.push("build");
+  const i=nearestPlot(v);if(i>=0){const s=PS.plots[i];if(!s)list.push("plant");else if(!s.w)list.push("water");else if((s.g||0)>=1)list.push("harvest");}
+  if(PS.built&&inHouse(v)){if(v.distanceTo(SPOTS.stove)<1.6)list.push("cook","treat");if(v.distanceTo(SPOTS.fridge)<1.4)list.push("fridge");if(v.distanceTo(SPOTS.table)<1.6)list.push("eat");if(v.distanceTo(SPOTS.bed)<1.8)list.push("sleep");}
+  if(PS.built&&inHouse(v)&&v.distanceTo(SPOTS.couch)<2.2)list.push("tv");if(PS.built&&inHouse(v)&&v.distanceTo(SPOTS.fire)<1.8)list.push("fire");
+  if(PS.built&&v.distanceTo(SPOTS.tub)<2.6)list.push("tub");
+  if(v.distanceTo(dog.pos)<2.4)list.push("feed","pet","play");else list.push("call");
+  if(v.distanceTo(SPOTS.ship)<4.5)list.push("ship");
+  if(PS.inv.meal>0&&!list.includes("eat"))list.push("eat");
+  const key=list.join(",");if(key===lastActs)return list;lastActs=key;
+  const box=document.getElementById("ph-actions");box.textContent="";
+  list.forEach((id,k)=>{const b=document.createElement("button");if(k===0)b.className="main";b.textContent=ACTIONS[id].replace("Feed",`Feed ${PS.dogName}`).replace("🤚 Pet",`🤚 Pet ${PS.dogName}`);b.onclick=()=>act(id);box.append(b);});
+  return list;}
+window.addEventListener("keydown",e=>{if(!planetMode)return;const tg=e.target;if(tg&&(tg.tagName==="INPUT"||tg.tagName==="SELECT"))return;if(e.key.toLowerCase()==="e"){const l=contextActions();if(l.length)act(l[0]);}});
+
+/* ---- flying ---- */
+let flying=false;
+async function flyToPlanet(){
+  if(flying||planetMode)return;flying=true;
+  controls.autoRotate=false;rotBtn.classList.remove("on");focusFig=null;
+  const fl=ship.userData.flame;fl.material.opacity=.9;
+  controls.target.copy(PAD);camera.position.set(PAD.x+12,9,PAD.z+14);
+  log(`${PRIME_TAG}: ${isOwner?"Jason is":"A crew member is"} flying to their home planet 🚀`);say(prime,`Safe flight${isOwner?", Jason":""}! 🚀`,2600);
+  const t0=performance.now();await new Promise(r=>{const step=()=>{const k=(performance.now()-t0)/2200;ship.position.set(PAD.x,PAD.y+k*k*18,PAD.z+k*k*30);ship.rotation.x=-k*.5;controls.target.copy(ship.position);if(k<1)requestAnimationFrame(step);else r();};step();});
+  fadeEl.classList.add("on");await wait(900);
+  ship.position.copy(PAD);ship.rotation.x=0;fl.material.opacity=0;
+  enterPlanet();await wait(300);fadeEl.classList.remove("on");flying=false;
+}
+function enterPlanet(){
+  planetMode=true;renderPass.scene=planetScene;scene.traverse(o=>{if(o.isCSS2DObject)o.element.style.display="none";});
+  if(!pPlayer){pPlayer=makeAstronaut("#ffd166");pPlayer.tagEl.textContent="YOU";pPlayer.tagEl.classList.add("me");}
+  planetScene.add(pPlayer.root);pPlayer.pos.copy(SPOTS.ship);pPlayer.queue=[];pPlayer.moving=false;pPlayer.pose="stand";
+  camera.position.set(pPlayer.pos.x+6,9,pPlayer.pos.z+12);controls.target.set(pPlayer.pos.x,1,pPlayer.pos.z);controls.maxDistance=45;controls.minDistance=4;
+  hud.style.display="block";document.querySelector(".hud.tl").style.display="none";document.querySelector(".hud.bl").style.display="none";
+  lastActs="";renderHUD();pMsg(PS.built?`🏡 Welcome home! ${PS.dogName} missed you.`:"🪐 Welcome to your planet! Walk to the empty lot and build your house.",3800);
+  dogSay("👽 Bleep bloop! You're home!");dog.mode="come";
+}
+async function leavePlanet(){
+  fadeEl.classList.add("on");await wait(900);
+  planetMode=false;renderPass.scene=scene;hud.style.display="none";document.querySelector(".hud.tl").style.display="";document.querySelector(".hud.bl").style.display="";
+  controls.maxDistance=140;controls.minDistance=5;camera.position.set(PAD.x+10,10,PAD.z+16);controls.target.copy(PAD);
+  scene.add(marker);planetScene.traverse(o=>{if(o.isCSS2DObject)o.element.style.display="none";});
+  await wait(300);fadeEl.classList.remove("on");log(`${PRIME_TAG}: Welcome back aboard${isOwner?", Jason":""}.`);say(prime,`Welcome back${isOwner?", Jason":""}!`,2600);
+}
+// ship button in the view + sidebar
+const flyBtn=document.createElement("button");flyBtn.textContent="🚀 Fly to my planet";flyBtn.onclick=()=>planetMode?act("ship"):flyToPlanet();
+document.querySelector(".ctrls").prepend(flyBtn);
+
+/* ---- per-frame planet update ---- */
+function planetFrame(dt,t){
+  // clock & stats
+  PS.time+=dt; // 1 in-game minute per real second
+  const tod=PS.time%1440,day=Math.max(0,Math.min(1,(Math.sin((tod/1440)*Math.PI*2-Math.PI/2)+.35)*1.4));
+  pSun.intensity=.15+1.5*day;pHemi.intensity=.25+.5*day;planetScene.fog.color.setRGB(.2+.28*day,.15+.2*day,.35+.5*day);
+  if(!planetFrame._d||Math.abs(planetFrame._d-day)>.05){planetFrame._d=day;drawSky(day);}
+  houseLight.intensity=PS.built?(day<.5?4:1.4):0;lampL.intensity=PS.built&&day<.5?2:0;fireLight.intensity=PS.built?1.6+Math.sin(t*9)*.4:0;flames.scale.y=1+Math.sin(t*11)*.15;water.material.emissiveIntensity=.6+Math.sin(t*2)*.2;
+  const m=dt/60;PS.me.energy=Math.max(0,PS.me.energy-1.2*m);PS.me.hunger=Math.max(0,PS.me.hunger-1.8*m);
+  PS.pet.hunger=Math.max(0,PS.pet.hunger-2.2*m);PS.pet.happy=Math.max(0,PS.pet.happy-1.4*m);PS.pet.energy=Math.max(0,PS.pet.energy-(dog.mode==="fetch"?6:.8)*m);
+  // house build animation
+  const built=PS.built,bk=built?Math.min(1,(Date.now()-(PS.buildStart||0))/3000):0;
+  walls.scale.y=Math.max(.001,bk);walls.visible=built;roof.visible=built&&bk>=1&&!(pPlayer&&inHouse(pPlayer.pos));floorIn.visible=built;
+  houseG.children.forEach(c=>{if(c!==walls&&c!==roof&&c!==houseLight&&c!==lampL)c.visible=built&&bk>=1;});homeSign.visible=built&&bk>=1;
+  // player
+  const f=pPlayer;
+  const fwd=(pKeys.has("w")||pKeys.has("arrowup")?1:0)-(pKeys.has("s")||pKeys.has("arrowdown")?1:0),rt=(pKeys.has("d")||pKeys.has("arrowright")?1:0)-(pKeys.has("a")||pKeys.has("arrowleft")?1:0);
+  if((fwd||rt)&&!busy){if(f.onArrive){const r=f.onArrive;f.onArrive=null;r();}f.queue=[];camera.getWorldDirection(_fw);_fw.y=0;_fw.normalize();
+    const mx=_fw.x*fwd-_fw.z*rt,mz=_fw.z*fwd+_fw.x*rt,L=Math.hypot(mx,mz)||1,sp=3.2*dt;const n=new THREE.Vector3(f.pos.x+mx/L*sp,0,f.pos.z+mz/L*sp);
+    if(Math.hypot(n.x,n.z)<38&&pCanPass(f.pos,n)){f.pos.x=n.x;f.pos.z=n.z;}
+    f.moving=true;f.phase+=dt*12;f.tHeading=Math.atan2(mx,mz);pDriving=true;}
+  else if(pDriving){pDriving=false;f.moving=false;}
+  stepFig(f,dt);animateFig(f,dt,t);
+  // camera follows
+  const tgt=new THREE.Vector3(f.pos.x,1.1,f.pos.z);const delta=tgt.clone().sub(controls.target);controls.target.add(delta.multiplyScalar(.12));camera.position.add(delta);
+  // dog AI
+  dog.modeT-=dt;let goal=null;const dist=dog.pos.distanceTo(f.pos);
+  if(dog.mode==="fetch"&&dog.target){goal=dog.target;if(dog.pos.distanceTo(dog.target)<.5&&!ballThrow){dog.mode="return";dog.target=null;ball.position.y=-5;dogSay("✨ caught it!");}}
+  else if(dog.mode==="return"){goal=f.pos;if(dist<1.6){dog.mode="wag";dog.modeT=1.6;dogSay("💚");}}
+  else if(dog.mode==="come"){goal=f.pos;if(dist<1.8)dog.mode="idle";}
+  else if(dog.mode==="eat"||dog.mode==="wag"){if(dog.modeT<=0)dog.mode="idle";}
+  else{ if(dist>5)goal=f.pos; else if(Math.random()<dt*.15){dog.wander=new THREE.Vector3(f.pos.x+rnd(-4,4),0,f.pos.z+rnd(-4,4));} if(dog.wander&&dist<6){goal=dog.wander;if(dog.pos.distanceTo(dog.wander)<.4)dog.wander=null;} }
+  let moving=false;
+  if(goal){const dx=goal.x-dog.pos.x,dz=goal.z-dog.pos.z,d=Math.hypot(dx,dz),stop=(dog.mode==="fetch"?.05:1.3);
+    if(d>stop){const sp=(dog.mode==="fetch"||dog.mode==="return"?4.2:dist>8?4:2.2)*dt*(PS.pet.energy<10?.5:1);const n=new THREE.Vector3(dog.pos.x+dx/d*Math.min(sp,d),0,dog.pos.z+dz/d*Math.min(sp,d));
+      if(pCanPass(dog.pos,n)){dog.pos.copy(n);}else{const door=inHouse(dog.pos)?SPOTS.doorIn:SPOTS.doorOut;const ddx=door.x-dog.pos.x,ddz=door.z-dog.pos.z,dd=Math.hypot(ddx,ddz)||1;dog.pos.x+=ddx/dd*Math.min(sp,dd);dog.pos.z+=ddz/dd*Math.min(sp,dd);}
+      dog.heading=Math.atan2(dx,dz);moving=true;}}
+  let dh=dog.heading-dog.g.rotation.y;dh=Math.atan2(Math.sin(dh),Math.cos(dh));dog.g.rotation.y+=dh*Math.min(1,dt*8);
+  dog.phase+=dt*(moving?14:3);dog.legs.forEach((l,k)=>l.rotation.x=moving?Math.sin(dog.phase+(k?Math.PI:0))*.7:0);dog.arms.forEach((a,k)=>{a.rotation.x=moving?Math.sin(dog.phase+(k?0:Math.PI))*.6:(dog.mode==='wag'?-2.4+Math.sin(t*12)*.3:Math.sin(t*2+k)*.1);});
+  dog.tail.rotation.z=Math.sin(t*(dog.mode==="wag"||PS.pet.happy>60?10:3))*.25;dog.head.rotation.x=dog.mode==="eat"?.6+Math.sin(t*14)*.1:Math.sin(t*1.5)*.08;
+  dog.g.position.y=(moving?Math.abs(Math.sin(dog.phase))*.06:0)+.06+Math.sin(t*3)*.03;
+  if(PS.pet.hunger<25&&Math.random()<dt*.05)dogSay("🥺 tummy glowing… hungry");else if(PS.pet.happy<25&&Math.random()<dt*.05)dogSay("🥺 play with me?");
+  // ball arc
+  if(ballThrow){ballThrow.t+=dt/1.1;const k=Math.min(1,ballThrow.t);ball.position.lerpVectors(ballThrow.from,ballThrow.to,k);ball.position.y=1.4*(1-k)+Math.sin(k*Math.PI)*3+.13;if(k>=1)ballThrow=null;}
+  if(PS.pet.energy<8&&dog.mode==="idle"&&Math.random()<dt*.05)dogSay("😴");
+  updatePlots();
+  if(t-hudT>.5){hudT=t;renderHUD();contextActions();}
+  if(t-saveT>5){saveT=t;savePlanet();}
+  pShip.position.y=.25+Math.sin(t*1.2)*.04;
+}
+function planetClick(e){
+  const r=renderer.domElement.getBoundingClientRect();mouse.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(mouse,camera);
+  if(ray.intersectObject(dog.g,true).length){act("pet");return;}
+  const pt=new THREE.Vector3();if(!ray.ray.intersectPlane(FLOOR,pt))return;if(Math.hypot(pt.x,pt.z)>38)return;
+  showMarker(pt,"#ffd166");if(marker.parent!==planetScene)planetScene.add(marker);pWalk(pPlayer,new THREE.Vector3(pt.x,0,pt.z),3);
+}
+ship.traverse(o=>o.userData.isShip=true);
+
+/* =========================== LOOP =========================== */
+const clock=new THREE.Clock();let slowT=0,texT=0;
+function frame(){
+  const dt=Math.min(.05,clock.getDelta()),t=clock.elapsedTime;
+  [prime,...AGENTS.map(a=>a.fig),...[...guests.values()].map(g=>g.fig)].forEach(f=>{stepFig(f,dt);animateFig(f,dt,t);});
+  if(planetMode)planetFrame(dt,t);else driveMe(dt);if(markerT>0){markerT=Math.max(0,markerT-dt*.8);marker.material.opacity=markerT*.9;marker.scale.setScalar(1+(1-markerT)*.6);}
+  clouds.rotation.y+=dt*.004;earth.rotation.y+=dt*.002;
+  holoGlobe.rotation.y+=dt*.6;folderIcon.rotation.y+=dt*(reports.some(r=>r.status==="new")?2:.4);folderIcon.position.y=1.75+Math.sin(t*2)*.05;barista.position.y=Math.sin(t*2)*.03;bHead.rotation.y=Math.sin(t*.7)*.5;beam.material.opacity=.1+Math.sin(t*2)*.03;
+  holoDots.forEach((m,i)=>{const a=AGENTS[i],ang=t*.8+i/AGENTS.length*Math.PI*2,on=isWorking(a);m.position.set(HOLO.x+Math.cos(ang)*.85,1.75+Math.sin(t*2+i)*.1,HOLO.z+Math.sin(ang)*.85);m.scale.setScalar(on?1.6+Math.sin(t*8)*.3:.8);});
+  AGENTS.forEach(a=>{a.lapLight.intensity=a.typing?1.2:0;
+    if(a.blocks)a.blocks.forEach((b,k)=>{b.position.y=.16+k*.33+(isWorking(a)?Math.abs(Math.sin(t*4+k))*.08:0);});
+    if(a.ringLight)a.ringLight.material.emissiveIntensity=isWorking(a)?2.5:.1;
+    if(a.coin)a.coin.rotation.z+=dt*(isWorking(a)?4:.6);
+    if(a.trophy)a.trophy.rotation.y+=dt*(isWorking(a)?3:.4);
+    if(a.meg)a.meg.scale.setScalar(isWorking(a)?1+Math.sin(t*10)*.06:1);
+  });
+  if(t-texT>.12){texT=t;AGENTS.forEach(a=>{drawLaptop(a,a.typing,t);if(a.id==="btc"||a.id==="clip"||a.id==="rbx"||stateOn[a.id+"_d"]!==isWorking(a)){stateOn[a.id+"_d"]=isWorking(a);decorTex(a,isWorking(a),t)(a.decT);}});
+    holoScreenTex.forEach((tx,i)=>drawPrimeScreen(tx,i,t));drawTV(t);}
+  if(t-slowT>1){slowT=t;updateState(t);}
+  // camera focus / reset
+  if(planetMode){}else if(focusFig&&performance.now()<focusUntil){const p=focusFig.pos;const tgt=new THREE.Vector3(p.x,1,p.z);controls.target.lerp(tgt,.05);
+    const dir=camera.position.clone().sub(controls.target).setY(0).normalize();const want=tgt.clone().add(dir.multiplyScalar(7)).setY(5.5);camera.position.lerp(want,.04);}
+  else if(focusFig){focusFig=null;}
+  if(resetting>performance.now()){controls.target.lerp(HOME_TGT,.08);camera.position.lerp(HOME_POS,.08);}
+  controls.update();
+  composer.render();labelR.render(planetMode?planetScene:scene,camera);
+  requestAnimationFrame(frame);
+}
+resize();
+// initial textures
+AGENTS.forEach(a=>{drawLaptop(a,false,0);});
+document.fonts&&document.fonts.ready.then(()=>{AGENTS.forEach(a=>{stateOn[a.id]=undefined;});});
+document.getElementById("loading").remove();
+window.__stationOK=true;
+log(`${PRIME_TAG}: Station online. ${AGENTS.length} crew aboard.`);
+updateState(0);
+frame();
+AGENTS.forEach(a=>crewLife(a));primeLife();
+connectRoom();
+</script>
+</body>
+</html>
