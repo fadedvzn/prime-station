@@ -39,7 +39,7 @@ Replace YOUR-RENDER-HOST with your actual Render hostname:
 The callback URL must match exactly in the provider developer console and the matching Render environment variable.
 
 ## Connect platforms
-- **Instagram:** use a Business or Creator account. Create a Meta developer app, add Instagram API with Instagram Login, enable `instagram_business_basic` and `instagram_business_content_publish`, and set the app ID, app secret, and redirect URI. Reels require publicly reachable HTTPS video media.
+- **Instagram:** use a Business or Creator account. Create a Meta developer app, add Instagram API with Instagram Login, enable `instagram_business_basic` and `instagram_business_content_publishing`, and set the app ID, app secret, and redirect URI. Reels require publicly reachable HTTPS video media.
 - **TikTok:** create a TikTok for Developers app, add Content Posting API, request `video.publish` (and `video.upload` if using draft upload), and complete TikTok's audit before expecting public direct posts. URL-pull publishing requires a verified media domain.
 - **YouTube:** create a Google Cloud project, enable YouTube Data API v3, configure OAuth consent, create a Web application OAuth client, and add the callback URL as an authorized redirect URI. Upload privacy defaults to Private.
 - **Discord:** create a channel webhook in Server Settings → Integrations → Webhooks. Add its full URL as `DISCORD_WEBHOOK_URL`. Treat it as a password.
