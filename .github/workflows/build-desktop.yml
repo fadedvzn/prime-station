@@ -9,6 +9,9 @@ on:
       - "package.json"
       - ".github/workflows/build-desktop.yml"
 
+permissions:
+  contents: write
+
 jobs:
   windows-installer:
     runs-on: windows-latest
@@ -23,10 +26,23 @@ jobs:
         run: npm install
       - name: Build Windows installer
         run: npm run desktop:build
-      - name: Upload installer
+      - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
           name: prime-station-windows-installer
           path: release/*.exe
           if-no-files-found: error
           retention-days: 30
+      - name: Publish installer to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: desktop-latest
+          name: Prime Station for Windows
+          body: |
+            Download the Windows installer below.
+
+            Install Prime Station on Windows, then sign in or request access to the shared station.
+            This desktop app connects to the hosted Prime Station service and requires an internet connection.
+          files: release/*.exe
+          fail_on_unmatched_files: true
+          make_latest: true
