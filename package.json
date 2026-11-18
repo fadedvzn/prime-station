@@ -1,19 +1,52 @@
 {
-  "name":"prime-station",
-  "version":"1.0.0",
-  "private":true,
-  "type":"module",
-  "engines":{"node":">=22"},
-  "scripts":{"start":"node server/index.js"},
-  "dependencies":{
-    "@anthropic-ai/sdk":"^0.39.0",
-    "better-sqlite3":"^11.8.1",
-    "express":"^4.21.2",
-    "express-rate-limit":"^7.5.0",
-    "googleapis":"^144.0.0",
-    "helmet":"^8.0.0",
-    "multer":"^1.4.5-lts.1",
-    "node-cron":"^3.0.3",
-    "openai":"^4.85.4"
+  "name": "prime-station",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "desktop": "electron .",
+    "desktop:build": "electron-builder --win nsis"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "better-sqlite3": "^11.8.1",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "googleapis": "^144.0.0",
+    "helmet": "^8.0.0",
+    "multer": "^1.4.5-lts.1",
+    "node-cron": "^3.0.3",
+    "openai": "^4.85.4"
+  },
+  "main": "desktop/main.cjs",
+  "devDependencies": {
+    "electron": "^37.2.6",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.primestation.desktop",
+    "productName": "Prime Station",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "desktop/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   }
 }
