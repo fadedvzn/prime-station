@@ -101,6 +101,40 @@
   .feedwrap{flex:1;min-height:200px;display:flex;flex-direction:column}
   #feed{flex:1;overflow:auto;font:12px ui-monospace,Menlo,monospace;color:#b8bdd3;padding-right:4px;max-height:420px}
   #feed div{padding:4px 0;border-bottom:1px dashed #151a2a}
+
+/* ===== Prime Station: clean 2D responsive dashboard ===== */
+:root{--bg:#080b13;--panel:#101726;--line:#263247;--text:#edf3ff;--muted:#9aa8bd;--prime:#73d9ff}
+html,body{min-height:100%;overflow-x:hidden}
+header{position:sticky;top:0;z-index:30;padding:12px clamp(14px,2vw,28px);background:#0b1220;border-bottom:1px solid #263247}
+.logo{letter-spacing:2px}
+.hstats{gap:10px 18px;flex-wrap:wrap;font-size:10px}
+main{display:flex;flex-direction:column;min-height:calc(100vh - 60px);width:100%;max-width:1600px;margin:0 auto}
+#view{height:132px;min-height:132px;max-height:132px;flex:none;overflow:hidden;background:radial-gradient(ellipse at 80% 0%,#153a58 0%,transparent 42%),linear-gradient(115deg,#101b2d,#0b1220 55%,#101b2d);border-bottom:1px solid #263247}
+#view canvas,#view>div:not(.hud):not(.ctrls):not(.toast):not(#loading):not(#err){display:none!important}
+#view .hud,#view .ctrls,#view #loading{display:none!important}
+#view:before{content:"PRIME STATION";display:block;padding:30px clamp(18px,4vw,54px) 0;font:900 clamp(21px,3vw,32px) Orbitron,Inter,sans-serif;letter-spacing:3px;color:#edf7ff}
+#view:after{content:"AGENT COMMAND CENTER  /  CONNECT • CREATE • AUTOMATE";display:block;padding:8px clamp(18px,4vw,54px);font:600 10px Inter,sans-serif;letter-spacing:2px;color:#8fb8d5}
+aside{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:0;background:#080d17;border:0;max-height:none;min-width:0;overflow:visible}
+.sec{min-width:0;padding:16px clamp(12px,1.8vw,22px);border:1px solid #1e2a3d;border-radius:12px;margin:10px;background:#0d1523}
+.sec h2{font-size:11px;letter-spacing:1.5px;color:#9fb3cc}
+.member,.rep,.idea{min-width:0;overflow-wrap:anywhere}
+.mbtns button,.mbtns a,.cbtn,.rep .acts a,.rep .acts button,.idea .acts button{min-height:32px}
+input,select,textarea,button{max-width:100%}
+input,select,textarea{min-width:0}
+.collab input,.sugg-form select,.sugg-form textarea{width:100%}
+.folder,.ideas,#feed{max-height:360px;overflow:auto}
+@media(max-width:760px){
+ header{position:relative;align-items:flex-start}
+ .hstats{width:100%;gap:8px 14px}
+ #view{height:112px;min-height:112px;max-height:112px}
+ aside{grid-template-columns:minmax(0,1fr)}
+ .sec{margin:7px 10px;padding:14px}
+}
+@media(min-width:761px){
+ aside .sec{grid-column:auto}
+ aside .sec.collab{grid-column:1/-1}
+}
+
 </style>
 <script type="importmap">
 {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
