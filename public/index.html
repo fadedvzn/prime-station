@@ -1791,5 +1791,26 @@ boot();
  paint();setInterval(paint,1200);
 })();
 </script>
+
+<style>
+/* Give the 3D station a larger viewing area */
+#view{
+  height: min(76vh, 780px) !important;
+  min-height: 560px !important;
+  max-height: 780px !important;
+  flex: none !important;
+}
+@media (max-width: 760px){
+  #view{
+    height: 64vh !important;
+    min-height: 430px !important;
+    max-height: 620px !important;
+  }
+}
+</style>
+<script>
+/* Recalculate the WebGL drawing size after applying the larger view */
+window.dispatchEvent(new Event("resize"));
+</script>
 </body>
 </html>
