@@ -72,10 +72,13 @@
   .collab .row2{display:flex;gap:6px;margin-top:6px}.collab .row2 input{margin:0}
   .cbtn{font:600 11px Inter;padding:5px 9px;border-radius:7px;border:1px solid #7fe3ff;background:transparent;color:#7fe3ff;cursor:pointer}
   .cbtn:hover{background:#7fe3ff;color:#000}
-  .who{display:flex;flex-direction:column;gap:5px;margin-top:8px}
-  .who div{font-size:12px;display:flex;gap:7px;align-items:center}
-  .who i{width:9px;height:9px;border-radius:50%;flex:none}
-  .who span{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .who{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+  .who div{font-size:12px;display:flex;gap:9px;align-items:center;min-width:0;padding:9px 10px;border:1px solid #263247;border-radius:9px;background:#101a2a}
+  .who i{width:9px;height:9px;border-radius:50%;flex:none;box-shadow:0 0 8px currentColor}
+  .who b{color:#edf3ff;white-space:nowrap}
+  .who span{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  .playerlist-title{display:flex;align-items:center;justify-content:space-between;margin:14px 0 7px;font:700 11px Orbitron,sans-serif;letter-spacing:1.5px;color:#9fb3cc}
+  .playerlist-title small{font:600 10px Inter,sans-serif;color:#73d9ff;letter-spacing:0}
 .toast{position:absolute;left:50%;top:16px;transform:translate(-50%,-20px);opacity:0;z-index:7;pointer-events:none;transition:.35s;
     font:700 14px Inter;color:#fff;padding:10px 18px;border-radius:999px;background:#0b0e17ee;border:1px solid var(--c);box-shadow:0 0 18px var(--c)}
   .toast.show{opacity:1;transform:translate(-50%,0)}
@@ -837,24 +840,22 @@ function renderCollab(){
   document.getElementById("h-vis").textContent=guests.size;
   drawBoard([...guests.values()].map(g=>({name:g.name,color:g.color,status:g.status||"just vibing"})));
   const who=document.getElementById("who");if(!who)return;who.textContent="";
+  const count=document.getElementById("player-count");if(count)count.textContent=`${guests.size} ONLINE`;
   for(const g of guests.values()){const d=document.createElement("div"),i=document.createElement("i"),n=document.createElement("b"),sp=document.createElement("span");
-    i.style.background=g.color;n.textContent=g.me?"You":g.name;
-    sp.textContent=" — "+(g.status||({roam:"hanging out",cafe:"on a café break",lounge:"in the lounge","meet-a":"in the Meeting Room","meet-b":"in the Meeting Room",holo:"at the holo map",prime:"reporting to Prime"}[g.loc]||(g.loc&&g.loc.startsWith("desk-")?"at a desk":"")));
+    i.style.background=g.color;i.style.color=g.color;n.textContent=g.me?"You (you)":g.name;
+    const place=({roam:"Exploring",cafe:"Café",lounge:"Lounge","meet-a":"Meeting room","meet-b":"Meeting room",holo:"Holo map",prime:"With Prime",bay:"My bay"}[g.loc]||(g.loc&&g.loc.startsWith("desk-")?"At a desk":"Online"));
+    sp.textContent=" — "+(g.status||place);
     d.append(i,n,sp);who.append(d);}
 }
 function renderControls(){
   collabBody.innerHTML=`<p>You're aboard. Anyone you share this page with shows up on the Collab Deck too, walking around and working with you.</p>
     <p id="mybay" style="color:#bfefff"></p>
-    <p style="font-size:11px">Move your astronaut: <b>WASD / arrow keys</b>, or click / tap the floor.</p>
-    <div class="grid"><button class="cbtn" data-loc="bay">💻 My bay</button><button class="cbtn" data-loc="cafe">☕ Café</button>
-      <button class="cbtn" data-loc="lounge">🛋️ Lounge</button><button class="cbtn" data-loc="meet-a">🤝 Meeting room</button>
-      <button class="cbtn" data-loc="holo">🛰️ Holo map</button><button class="cbtn" data-loc="prime">👑 Report to Prime</button><button class="cbtn" data-loc="roam">🚶 Wander</button></div>
-    <p style="margin:10px 0 0;font-size:11px">Go help with a project — walk into its station:</p>
-    <div class="grid">${AGENTS.map(a=>`<button class="cbtn" data-loc="pod-${a.id}" style="border-color:${a.color};color:${a.color}">${PROJ[a.id][0]} ${PROJ[a.id][1]}</button>`).join("")}</div>
+    <div class="playerlist-title"><span>PLAYER LIST</span><small id="player-count">0 ONLINE</small></div>
+    <div class="who" id="who" aria-live="polite"></div>
+    <p style="margin:12px 0 6px;font-size:11px;color:var(--muted)">Set your station status</p>
     <input id="nick" maxlength="24" placeholder="Your name on the station">
     <input id="status" maxlength="80" placeholder="What are you working on? (e.g. RVZN drop)">
     <div class="row2"><input id="chat" maxlength="140" placeholder="Say something to the crew…"><button class="cbtn" id="send">Say</button></div>
-    <div class="who" id="who"></div>
     <div class="sugg-form" style="margin-top:14px"><h2 style="margin:0 0 4px">IDEAS BOARD</h2>
       <p style="margin:0">Pitch game ideas, trading tips, RVZN designs — anything for Jason's projects. Only Jason can change or remove ideas.</p>
       <select id="sg-station">${AGENTS.map(a=>`<option value="${a.id}">${PROJ[a.id][0]} ${PROJ[a.id][1]} (${a.sign})</option>`).join("")}<option value="general">👑 Anything else</option></select>
@@ -1022,14 +1023,10 @@ const FLOOR=new THREE.Plane(new THREE.Vector3(0,1,0),0);
 const marker=new THREE.Mesh(new THREE.RingGeometry(.25,.36,32),new THREE.MeshBasicMaterial({color:0x7fe3ff,transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false}));
 marker.rotation.x=-Math.PI/2;marker.position.y=.03;scene.add(marker);let markerT=0;
 function showMarker(v,color){marker.position.x=v.x;marker.position.z=v.z;marker.material.color.set(color);markerT=1;}
-/* keyboard driving */
+/* Keyboard movement disabled in the 2D dashboard. */
 const keys=new Set();let lastDrive=0,lastSend=0;
-window.addEventListener("keydown",e=>{const tg=e.target;if(tg&&(tg.tagName==="INPUT"||tg.tagName==="TEXTAREA"))return;const k=e.key.toLowerCase();
-  if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright"].includes(k)){keys.add(k);if(k.startsWith("arrow"))e.preventDefault();}});
-window.addEventListener("keyup",e=>keys.delete(e.key.toLowerCase()));
-window.addEventListener("blur",()=>keys.clear());
 const _fw=new THREE.Vector3();
-function driveMe(dt){
+function driveMe(dt){return; /* retained below for legacy 3D compatibility */
   const me=guests.get(myPeer);if(!me||!room)return;const f=me.fig;
   const fwd=(keys.has("w")||keys.has("arrowup")?1:0)-(keys.has("s")||keys.has("arrowdown")?1:0);  const rt=(keys.has("d")||keys.has("arrowright")?1:0)-(keys.has("a")||keys.has("arrowleft")?1:0);
   if(!fwd&&!rt){if(me._driving){me._driving=false;f.moving=false;room.presence({loc:"free",x:+f.pos.x.toFixed(2),z:+f.pos.z.toFixed(2)}).catch(()=>{});}return;}
