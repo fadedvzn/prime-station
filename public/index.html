@@ -309,10 +309,52 @@ input,select,textarea{min-width:0}
   </aside>
 </main>
 
+<style>
+/* Prime Station 2D-first mode: the dungeon must remain usable without WebGL/CDN imports. */
+#view canvas,.hud,.ctrls,#loading,#err{display:none!important}
+#view{display:block!important;height:auto!important;min-height:0!important}
+#view #office-visual{display:block!important}
+@media(max-width:700px){#view #office-visual .office-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
 <script>
-  // show load errors on screen
-  window.addEventListener("error",e=>{const el=document.getElementById("err");el.style.display="flex";el.textContent="Station error: "+(e.message||"failed to load 3D engine");});
-  setTimeout(()=>{if(!window.__stationOK){const el=document.getElementById("err");el.style.display="flex";el.textContent="The 3D engine didn't load. Check your connection and refresh.";}},15000);
+(function(){
+ const agents=[
+  {id:"mkt",name:"PAUL",role:"Marketing",icon:"📣",color:"#ff7a45"},
+  {id:"sales",name:"SAM",role:"Sales",icon:"💼",color:"#3ddc97"},
+  {id:"btc",name:"MATT",role:"Bitcoin research",icon:"₿",color:"#f2bb4b"},
+  {id:"meme",name:"DEX",role:"Meme coin analyst · paper trading",icon:"🐸",color:"#b58cff"},
+  {id:"clip",name:"PEANUT",role:"Clip scout",icon:"🎬",color:"#65c8ff"},
+  {id:"rbx",name:"GUS",role:"Roblox",icon:"🎮",color:"#ff7ca8"}
+ ];
+ const grid=document.getElementById("office-grid");
+ if(grid&&!grid.dataset.ready){
+  grid.innerHTML=agents.map((a,i)=>'<article class="office-room" id="office-'+a.id+'" style="--agent-color:'+a.color+';--walk-delay:'+(i*.23)+'s"><div class="room-name"><span class="room-light"></span>'+a.name+' · CHAMBER</div><div class="room-role">'+a.role+'</div><div class="agent-stage"><div class="office-bubble" id="office-bubble-'+a.id+'">Awaiting assignment</div><div class="walk-path"></div><div class="agent-avatar">'+a.icon+'</div><div class="desk"><span>▰</span></div></div><div class="agent-state" id="office-state-'+a.id+'">● STANDBY</div><div class="office-foot"><span>LIVE TASK</span><b id="office-task-'+a.id+'">Waiting for a task</b></div></article>').join("");
+  grid.dataset.ready="1";
+ }
+ async function refresh(){
+  try{
+   const r=await fetch("/api/tasks",{credentials:"same-origin"});if(!r.ok)return;
+   const tasks=await r.json(),latest={};
+   for(const t of tasks){if(!latest[t.agent])latest[t.agent]=t;}
+   let received=0;
+   agents.forEach(a=>{
+    const t=latest[a.id],room=document.getElementById("office-"+a.id);if(!room)return;
+    const state=document.getElementById("office-state-"+a.id),title=document.getElementById("office-task-"+a.id),bubble=document.getElementById("office-bubble-"+a.id);
+    const status=t?.status||"idle",working=status==="running",queued=status==="queued",review=["review","approved","published"].includes(status);
+    room.classList.toggle("break",!working&&!queued);room.classList.toggle("working",working);
+    state.textContent=working?"● WORKING":queued?"● QUEUED":review?"● FILE SENT TO PRIME":status==="failed"?"● BLOCKED":"● STANDBY";
+    title.textContent=t?.title||"Waiting for a task";
+    bubble.textContent=working?"Researching / processing…":queued?"Waiting in task queue":review?"Report sent through the data pipe":status==="failed"?"Task needs attention":"Awaiting assignment";
+    if(t?.output&&review)received++;
+   });
+   const badge=document.getElementById("pipeline-count"),inbox=document.getElementById("prime-inbox-count");
+   if(badge)badge.textContent=received+" FILE"+(received===1?"":"S")+" RECEIVED";
+   if(inbox)inbox.textContent="COMMAND INBOX · "+received;
+  }catch(e){/* 2D dungeon stays visible if the owner is signed out or the API is offline. */}
+ }
+ refresh();setInterval(refresh,5000);
+ window.addEventListener("error",e=>console.warn("Optional 3D layer unavailable; 2D dungeon remains active.",e.message));
+})();
 </script>
 
 <script type="module">
