@@ -35,6 +35,7 @@ Replace YOUR-RENDER-HOST with your actual Render hostname:
 - Instagram: `https://YOUR-RENDER-HOST/api/oauth/instagram/callback`
 - TikTok: `https://YOUR-RENDER-HOST/api/oauth/tiktok/callback`
 - YouTube: `https://YOUR-RENDER-HOST/api/oauth/youtube/callback`
+- Gmail: `https://YOUR-RENDER-HOST/api/oauth/gmail/callback`
 
 The callback URL must match exactly in the provider developer console and the matching Render environment variable.
 
@@ -42,6 +43,9 @@ The callback URL must match exactly in the provider developer console and the ma
 - **Instagram:** use a Business or Creator account. Create a Meta developer app, add Instagram API with Instagram Login, enable `instagram_business_basic` and `instagram_business_content_publishing`, and set the app ID, app secret, and redirect URI. Reels require publicly reachable HTTPS video media.
 - **TikTok:** create a TikTok for Developers app, add Content Posting API, request `video.publish` (and `video.upload` if using draft upload), and complete TikTok's audit before expecting public direct posts. URL-pull publishing requires a verified media domain.
 - **YouTube:** create a Google Cloud project, enable YouTube Data API v3, configure OAuth consent, create a Web application OAuth client, and add the callback URL as an authorized redirect URI. Upload privacy defaults to Private.
+- **Gmail:** use the same Google Cloud OAuth client, enable the Gmail API, add the `gmail.send` scope, and register `https://YOUR-RENDER-HOST/api/oauth/gmail/callback`. Add `GMAIL_REDIRECT_URI` if you need to override the default callback. Prime Control then offers a Gmail connection and an owner-confirmed email form.
+- **SMS / phone calls:** configure a Twilio account and phone number, then set `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`, and `JARVIS_ALLOWED_PHONE` in Render. Store credentials only in Render Environment, never in chat or GitHub. The communications API only accepts the allowlisted destination and requires explicit confirmation for each send/call.
+- **Web research:** set `TAVILY_API_KEY` in Render to enable sourced JARVIS web research. In JARVIS, start a request with `research:` (for example, `research: compare current short-form video trends for car detailing`). Without this key, ordinary AI chat still works but live sourced research is unavailable.
 - **Discord:** create a channel webhook in Server Settings → Integrations → Webhooks. Add its full URL as `DISCORD_WEBHOOK_URL`. Treat it as a password.
 - **Roblox:** create a Creator Dashboard Open Cloud API key with `universe-places` write permission for the target experience. Add the key, universe ID, and place ID. Publishing sends a compiled `.rbxl` or `.rbxlx` place file; it does not control an open Studio session.
 
