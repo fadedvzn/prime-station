@@ -241,6 +241,32 @@ input,select,textarea{min-width:0}
 @media(max-width:520px){#view #office-visual .office-grid{grid-template-columns:1fr 1fr;gap:8px}#view #office-visual .office-room{min-height:185px;padding:10px 9px}.pipeline-track{grid-template-columns:1fr}.pipeline-track .pipe-rail{width:3px;height:25px;justify-self:center}.pipeline-track .pipe-rail>i{left:-2px;top:0;animation:pipe-dots-vertical 1.8s linear infinite}.pipeline-track .pipe-packet{left:-7px;top:0;animation:pipe-travel-vertical 3s linear infinite}.pipeline-track .pipe-rail:nth-of-type(4){display:block}.pipeline-track .prime-node{grid-column:auto}.pipeline-top{align-items:flex-start;flex-direction:column}}
 @keyframes pipe-dots-vertical{0%{top:0;opacity:0}15%{opacity:1}85%{opacity:1}100%{top:100%;opacity:0}}
 @keyframes pipe-travel-vertical{0%{top:0;opacity:0}10%{opacity:1}90%{opacity:1}100%{top:calc(100% - 12px);opacity:0}}
+
+/* ===== 2D DUNGEON SKIN: retain animated agent movement and pipe transfer ===== */
+#view #office-visual{background:radial-gradient(ellipse at 50% -5%,#39445a 0%,transparent 55%),linear-gradient(160deg,#171b27,#0b101a 62%,#090d16)}
+#view #office-visual:before{opacity:.22;background-image:linear-gradient(#a7b4c722 1px,transparent 1px),linear-gradient(90deg,#a7b4c722 1px,transparent 1px);background-size:38px 38px}
+#view #office-visual .office-title{color:#f1dfba;text-shadow:0 0 12px #d5a85b44}
+#view #office-visual .office-sub{color:#b6a78d}
+#view #office-visual .office-live{color:#a7edbd;border-color:#41694e;background:#17271d}
+#view #office-visual .office-room{border:1px solid #625640;border-radius:5px;background:linear-gradient(145deg,#33313a,#24242d 52%,#191c26);box-shadow:inset 0 0 0 5px #ffffff06,inset 0 0 22px #0009,0 8px 18px #0008}
+#view #office-visual .office-room:before{height:5px;background:linear-gradient(90deg,#66543b,var(--agent-color),#66543b)}
+#view #office-visual .office-room:after{inset:8px;border:1px solid #d4bd8a18;border-radius:2px}
+#view #office-visual .room-name{color:#f0dfbf}
+#view #office-visual .room-role{color:#b3a68f}
+#view #office-visual .agent-stage{background:radial-gradient(ellipse at 50% 80%,#0008,transparent 65%)}
+#view #office-visual .walk-path{border-color:#b99c6c88}
+#view #office-visual .desk{border-color:#8a704d;background:linear-gradient(#6a553c,#3c3027);box-shadow:0 5px 0 #100e0d}
+#view #office-visual .desk:before{border-color:#b99c76;background:linear-gradient(135deg,#293b48,#111b24);box-shadow:0 0 12px #7fe3ff22}
+#view #office-visual .office-state{color:#a7edbd}
+#view #office-visual .office-foot{color:#a99c86}
+#view #office-visual .office-foot b{color:#e7d7b9}
+#view #office-visual .office-room.talking{border-color:#d7b66c;box-shadow:0 0 18px #d7b66c22,inset 0 0 22px #0008}
+.prime-pipeline{border:1px solid #756044;border-radius:5px;background:linear-gradient(110deg,#292631,#171b26 55%,#302a24);box-shadow:inset 0 0 0 4px #ffffff05,0 10px 24px #0007}
+.pipe-node,.prime-node{border-color:#766348;border-radius:4px;background:linear-gradient(145deg,#302e35,#171c26);box-shadow:inset 0 0 12px #0008}
+.prime-node{border-color:#8bc8d5;background:linear-gradient(145deg,#244451,#111f2b);box-shadow:0 0 18px #58c5e522}
+.pipe-rail{height:7px;background:linear-gradient(#7b674d,#2b3943 48%,#101820);border:1px solid #a28a63;box-shadow:0 0 10px #4abfe544}
+.pipe-rail>i{top:0;width:5px;height:5px}
+.pipeline-count{color:#a7edbd;border-color:#41694e}
 </style>
 <script type="importmap">
 {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
@@ -253,9 +279,9 @@ input,select,textarea{min-width:0}
 </header>
 <main>
   <div id="view">
-    <section id="office-visual" aria-label="Animated 2D agent office"><div class="office-head"><div><div class="office-title">PRIME STATION · OFFICE FLOOR</div><div class="office-sub">LIVE CREW VIEW / WORK • BREAK • COLLABORATE</div></div><div class="office-live">● LIVE OFFICE</div></div><div class="office-grid" id="office-grid"></div>
+    <section id="office-visual" aria-label="Animated 2D command dungeon"><div class="office-head"><div><div class="office-title">PRIME STATION · COMMAND DUNGEON</div><div class="office-sub">LIVE AGENT CHAMBERS / RESEARCH • BUILD • REPORT</div></div><div class="office-live">● LIVE DUNGEON</div></div><div class="office-grid" id="office-grid"></div>
       <section class="prime-pipeline" aria-label="Agent file delivery pipeline">
-        <div class="pipeline-top"><div><b>FILE TRANSFER PIPELINE</b><small>Every finished agent report routes to the Prime command desk</small></div><span class="pipeline-count" id="pipeline-count">0 FILES RECEIVED</span></div>
+        <div class="pipeline-top"><div><b>UNDERGROUND DATA CONDUIT</b><small>Research packets travel through the pipe network to the Main Boss</small></div><span class="pipeline-count" id="pipeline-count">0 FILES RECEIVED</span></div>
         <div class="pipeline-track">
           <div class="pipe-node"><span>📥</span><b>AGENT OUTPUT</b><small>Drafts & research</small></div>
           <div class="pipe-rail"><i></i><i></i><i></i><div class="pipe-packet">📄</div></div>
@@ -344,8 +370,8 @@ let cache={minute:-1};
 function refreshSchedule(){const now=new Date(),minute=Math.floor(now/60000);if(cache.minute===minute)return;cache={minute};
   AGENTS.forEach(a=>{const l=findRun(a.rule,now,-1);cache[a.id]={next:findRun(a.rule,new Date(+now+60000),1),last:l&&+l>CREATED?l:null};});}
 const preview={};
-function realWorking(a){refreshSchedule();const l=cache[a.id].last;if(!l)return false;const p=parts(new Date(),TZ);const inWindow=p.h>=22||p.h<5;return inWindow&&(Date.now()-l)<7*3600000;}
-function isWorking(a){return realWorking(a)||(preview[a.id]>Date.now());}
+function realWorking(a){const t=window.primeLiveAgentState?.[a.id];return !!t&&t.status==='running';}
+function isWorking(a){return realWorking(a);}
 const fmtDur=ms=>{const s=Math.max(0,ms/1000|0),d=s/86400|0,h=s%86400/3600|0,m=s%3600/60|0,sec=s%60;if(d)return`${d}d ${h}h ${m}m`;if(h)return`${h}h ${m}m`;return`${m}m ${String(sec).padStart(2,"0")}s`;};
 const fmtWhen=d=>d.toLocaleString("en-US",{timeZone:TZ,weekday:"short",hour:"numeric",minute:"2-digit"});
 const feed=document.getElementById("feed");
@@ -1194,22 +1220,21 @@ function renderOffice(time=0){
   const grid=document.getElementById("office-grid");if(!grid)return;
   if(!grid.dataset.ready){
     grid.innerHTML=AGENTS.map((a,i)=>`<article class="office-room" id="office-${a.id}" style="--agent-color:${a.color};--walk-delay:${i*.23}s">
-      <div class="room-name"><span class="room-light"></span>${a.name.toUpperCase()} · WORK BAY</div><div class="room-role">${a.role}</div>
-      <div class="agent-stage"><div class="office-bubble" id="office-bubble-${a.id}">Working on an assignment</div><div class="walk-path"></div><div class="agent-avatar">${a.icon}</div><div class="desk"><span>▰</span></div></div>
-      <div class="agent-state" id="office-state-${a.id}">● READY</div>
-      <div class="office-foot"><span>ASSIGNED DUTY</span><b id="office-task-${a.id}">Standing by</b></div>
+      <div class="room-name"><span class="room-light"></span>${a.name.toUpperCase()} · CHAMBER</div><div class="room-role">${a.role}</div>
+      <div class="agent-stage"><div class="office-bubble" id="office-bubble-${a.id}">Awaiting assignment</div><div class="walk-path"></div><div class="agent-avatar">${a.icon}</div><div class="desk"><span>▰</span></div></div>
+      <div class="agent-state" id="office-state-${a.id}">● STANDBY</div>
+      <div class="office-foot"><span>LIVE TASK</span><b id="office-task-${a.id}">No active task</b></div>
     </article>`).join("");
     grid.dataset.ready="1";
   }
-  const cycle=Math.floor(time/8),talking=cycle%AGENTS.length,active=(time%8)<4;
-  AGENTS.forEach((a,i)=>{
-    const room=document.getElementById("office-"+a.id),state=document.getElementById("office-state-"+a.id),task=document.getElementById("office-task-"+a.id),bubble=document.getElementById("office-bubble-"+a.id);
+  AGENTS.forEach(a=>{
+    const room=document.getElementById("office-"+a.id),state=document.getElementById("office-state-"+a.id),task=document.getElementById("office-task-"+a.id),bubble=document.getElementById("office-bubble-"+a.id),live=window.primeLiveAgentState?.[a.id];
     if(!room)return;
-    const working=isWorking(a),chat=active&&(i===talking||i===(talking+1)%AGENTS.length),breakTime=!working&&!chat;
-    room.classList.toggle("break",breakTime);room.classList.toggle("talking",chat);room.classList.toggle("working",working);
-    state.textContent=chat?"● TEAM HUDDLE":working?"● ON ASSIGNMENT":"● STANDBY";
-    task.textContent=chat?"Sharing intel":working?(a.steps?.[Math.floor(time/5)%a.steps.length]||"Working on tasks"):"Awaiting assignment";
-    bubble.textContent=i===talking?["Moving a report to the line…","I found something for Prime.","Sending the finished file!","Checking the next task…"][cycle%4]:"Coordinating…";
+    const status=live?.status||"idle",working=status==="running",queued=status==="queued",review=status==="review";
+    room.classList.toggle("break",!working&&!queued&&!review);room.classList.toggle("talking",false);room.classList.toggle("working",working);
+    state.textContent=working?"● WORKING":queued?"● QUEUED":review?"● REPORT READY":status==="failed"?"● BLOCKED":"● STANDBY";
+    task.textContent=live?.title||"No active task";
+    bubble.textContent=working?"Researching / processing…":queued?"Task waiting in queue":review?"File sent to Prime for review":status==="failed"?"Task needs attention":"Awaiting assignment";
   });
   const count=Number(reportCount||0),inbox=document.getElementById("prime-inbox-count"),badge=document.getElementById("pipeline-count");
   if(inbox)inbox.textContent="COMMAND INBOX · "+count;
