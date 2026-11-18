@@ -778,36 +778,81 @@ const darkMat=std(0x3a4050,{roughness:.6,metalness:.3});
 function capsule(r,l,mat,parent,y){const m=mesh(new THREE.CapsuleGeometry(r,l,6,14),mat,0,y,0,parent);return m;}
 function makeAstronaut(color,prime=false){
   const col=new THREE.Color(color);
-  const accent=std(col,{roughness:.4,metalness:.2,emissive:col,emissiveIntensity:.25});
+  const accent=std(col,{roughness:.42,metalness:.18,emissive:col,emissiveIntensity:.12});
   const root=new THREE.Group();scene.add(root);
   const body=new THREE.Group();body.position.y=.9;root.add(body);
   const S=prime?1.12:1;root.scale.setScalar(S);
-  const torsoMat=prime?std(0xf1f3f8,{roughness:.4}):suitMat;
-  capsule(.21,.36,torsoMat,body,.36);
-  mesh(new THREE.BoxGeometry(.22,.16,.05),accent,0,.48,.2,body);           // chest panel
-  mesh(new THREE.BoxGeometry(.34,.44,.18),prime?std(0xd4af37,{metalness:1,roughness:.25}):darkMat,0,.4,-.25,body); // backpack
-  mesh(new THREE.TorusGeometry(.2,.035,8,24),accent,0,.08,0,body).rotation.x=Math.PI/2; // belt
-  // helmet
-  const head=new THREE.Group();head.position.y=.92;body.add(head);
-  mesh(new THREE.SphereGeometry(.2,32,24),prime?std(0xd4af37,{metalness:1,roughness:.18}):std(0xf4f6fa,{roughness:.25,metalness:.1}),0,0,0,head);
-  const visor=mesh(new THREE.SphereGeometry(.172,32,24,0,Math.PI*2,0,Math.PI*.55),new THREE.MeshPhysicalMaterial({color:prime?0x0a3a4a:col.clone().multiplyScalar(.35),metalness:1,roughness:.05,clearcoat:1,envMapIntensity:2}),0,.01,.06,head);
-  visor.rotation.x=Math.PI/2;visor.scale.set(1,1,.9);
-  mesh(new THREE.TorusGeometry(.17,.03,8,24),darkMat,0,-.16,0,head).rotation.x=Math.PI/2; // neck ring
-  if(prime){const crown=new THREE.Group();crown.position.y=.2;head.add(crown);const gold=std(0xffd54a,{metalness:1,roughness:.15,emissive:0x4a3300});
-    mesh(new THREE.CylinderGeometry(.12,.13,.06,16),gold,0,0,0,crown);for(let k=0;k<6;k++){const t=k/6*Math.PI*2;mesh(new THREE.ConeGeometry(.03,.1,6),gold,Math.cos(t)*.12,.07,Math.sin(t)*.12,crown);}
-    const cape=new THREE.Mesh(new THREE.PlaneGeometry(.55,.9,1,4),std(0x9e1328,{roughness:.8,side:THREE.DoubleSide}));cape.position.set(0,.2,-.36);cape.rotation.x=.12;body.add(cape);}
-  else{const ant=mesh(new THREE.CylinderGeometry(.008,.008,.16,6),darkMat,.12,.22,-.05,head);const tip=mesh(new THREE.SphereGeometry(.025,8,8),new THREE.MeshBasicMaterial({color:col}),.12,.31,-.05,head);}
-  // arms
-  function arm(side){const sh=new THREE.Group();sh.position.set(side*.29,.6,0);body.add(sh);
-    capsule(.068,.2,torsoMat,sh,-.15);mesh(new THREE.BoxGeometry(.15,.04,.15),accent,0,-.02,0,sh);
-    const el=new THREE.Group();el.position.y=-.31;sh.add(el);capsule(.062,.18,torsoMat,el,-.13);mesh(new THREE.SphereGeometry(.072,12,12),darkMat,0,-.29,0,el);return{sh,el};}
+  const torsoMat=prime?std(0xe6eaf0,{roughness:.72}):std(0xcbd3df,{roughness:.78});
+  const trimMat=std(0x303b4c,{roughness:.6,metalness:.25});
+  const skinTones=[0xd9a47e,0x9b6548,0xf0c6a0,0x754a37,0xc88962,0xe0b18e];
+  const hairTones=[0x211b19,0x493126,0x17191e,0x806044,0x30221c,0x4b4b50];
+  const pick=(arr,n)=>arr[Math.abs(n)%arr.length];
+  const seed=Math.round(col.r*71+col.g*137+col.b*199);
+  const skin=std(pick(skinTones,seed),{roughness:.88});
+  const hair=std(prime?0x252a35:pick(hairTones,seed+2),{roughness:.9});
+  // tailored pressure suit with layered chest, shoulder and waist details
+  capsule(.215,.37,torsoMat,body,.36);
+  mesh(new THREE.BoxGeometry(.27,.19,.055),trimMat,0,.48,.19,body);
+  mesh(new THREE.BoxGeometry(.19,.12,.025),accent,0,.49,.225,body);
+  mesh(new THREE.BoxGeometry(.075,.075,.025),std(0xeaf2ff,{metalness:.5}),-.07,.49,.245,body);
+  mesh(new THREE.BoxGeometry(.34,.44,.18),trimMat,0,.4,-.25,body);
+  mesh(new THREE.BoxGeometry(.24,.12,.025),accent,0,.47,-.35,body);
+  mesh(new THREE.TorusGeometry(.205,.026,8,28),trimMat,0,.08,0,body).rotation.x=Math.PI/2;
+  for(const side of [-1,1]){
+    mesh(new THREE.SphereGeometry(.105,18,14),prime?std(0xb89b65,{metalness:.45,roughness:.4}):trimMat,side*.205,.57,0,body).scale.set(1,.7,1);
+    mesh(new THREE.BoxGeometry(.105,.16,.035),accent,side*.145,.34,.19,body);
+    mesh(new THREE.BoxGeometry(.075,.12,.025),trimMat,side*.145,.12,.18,body);
+  }
+  // visible human head: face, ears, hairline, eyes and mouth
+  const head=new THREE.Group();head.position.set(0,.91,.005);body.add(head);
+  const skull=mesh(new THREE.SphereGeometry(.174,32,24),skin,0,0,0,head);skull.scale.set(.88,1.12,.86);
+  for(const side of [-1,1]){
+    const ear=mesh(new THREE.SphereGeometry(.043,16,12),skin,side*.151,-.005,0,head);ear.scale.set(.65,1,.55);
+    mesh(new THREE.SphereGeometry(.023,12,10),std(0x252b35),side*.058,.035,.144,head).scale.set(1,.62,.45);
+    mesh(new THREE.SphereGeometry(.008,10,8),std(0xf7f8fa,{roughness:.2}),side*.058,.038,.153,head);
+    const brow=mesh(new THREE.CapsuleGeometry(.009,.035,3,8),hair,side*.058,.071,.143,head);brow.rotation.z=side*.12;
+  }
+  mesh(new THREE.SphereGeometry(.025,12,10),skin,0,-.018,.153,head).scale.set(.62,1.2,.65);
+  mesh(new THREE.SphereGeometry(.036,16,10),std(0x87504a),0,-.09,.125,head).scale.set(1,.28,.45);
+  const hairCap=mesh(new THREE.SphereGeometry(.178,24,16,0,Math.PI*2,0,Math.PI*.57),hair,0,.035,-.008,head);hairCap.scale.set(.92,.82,.94);
+  // headset and collar
+  mesh(new THREE.TorusGeometry(.145,.025,8,24),trimMat,0,-.17,0,head).rotation.x=Math.PI/2;
+  mesh(new THREE.BoxGeometry(.31,.09,.22),trimMat,0,.09,0,body);
+  if(prime){
+    const gold=std(0xd4af63,{metalness:.72,roughness:.28});
+    mesh(new THREE.BoxGeometry(.19,.035,.2),gold,0,.72,-.015,body);
+    const cape=new THREE.Mesh(new THREE.PlaneGeometry(.52,.78,1,4),std(0x761b32,{roughness:.86,side:THREE.DoubleSide}));
+    cape.position.set(0,.17,-.37);cape.rotation.x=.12;body.add(cape);
+  }else{
+    // compact comms earpiece and antenna
+    mesh(new THREE.BoxGeometry(.045,.07,.035),accent,.174,.015,-.005,head);
+    mesh(new THREE.CylinderGeometry(.006,.006,.09,8),trimMat,.13,.17,-.02,head);
+  }
+  function arm(side){
+    const sh=new THREE.Group();sh.position.set(side*.29,.6,0);body.add(sh);
+    const shoulder=mesh(new THREE.SphereGeometry(.105,18,14),torsoMat,0,-.035,0,sh);shoulder.scale.set(1,1.05,1);
+    capsule(.067,.2,torsoMat,sh,-.17);
+    mesh(new THREE.BoxGeometry(.145,.055,.15),accent,0,-.035,.005,sh);
+    const el=new THREE.Group();el.position.y=-.31;sh.add(el);
+    capsule(.062,.19,torsoMat,el,-.13);
+    mesh(new THREE.TorusGeometry(.064,.012,6,16),trimMat,0,-.24,0,el);
+    const glove=mesh(new THREE.SphereGeometry(.07,16,12),std(0x252d3b,{roughness:.8}),0,-.3,.015,el);glove.scale.set(.95,1.05,.9);
+    mesh(new THREE.BoxGeometry(.11,.035,.09),accent,0,-.27,.045,el);
+    return{sh,el};
+  }
   const L=arm(1),Rr=arm(-1);
-  function leg(side){const hip=new THREE.Group();hip.position.set(side*.11,0,0);body.add(hip);
-    capsule(.085,.28,torsoMat,hip,-.21);
-    const kn=new THREE.Group();kn.position.y=-.44;hip.add(kn);capsule(.078,.26,torsoMat,kn,-.2);
-    mesh(new THREE.BoxGeometry(.15,.1,.26),darkMat,0,-.41,.04,kn);return{hip,kn};}
+  function leg(side){
+    const hip=new THREE.Group();hip.position.set(side*.11,0,0);body.add(hip);
+    capsule(.087,.29,torsoMat,hip,-.21);
+    mesh(new THREE.BoxGeometry(.13,.09,.14),trimMat,0,-.22,.025,hip);
+    const kn=new THREE.Group();kn.position.y=-.44;hip.add(kn);
+    capsule(.079,.25,torsoMat,kn,-.2);
+    mesh(new THREE.BoxGeometry(.15,.1,.22),trimMat,0,-.31,.035,kn);
+    const boot=mesh(new THREE.BoxGeometry(.15,.12,.27),std(0x202938,{roughness:.75}),0,-.41,.055,kn);
+    mesh(new THREE.BoxGeometry(.13,.025,.08),accent,0,-.46,.14,kn);
+    return{hip,kn};
+  }
   const LL=leg(1),RL=leg(-1);
-  // label + bubble
   const tagEl=document.createElement("div");tagEl.className="tag3d"+(prime?" prime":"");tagEl.style.setProperty("--c",color);
   const tag=new CSS2DObject(tagEl);tag.position.set(0,1.95,0);root.add(tag);
   const bubWrap=document.createElement("div");const bub=document.createElement("div");bub.className="bub"+(prime?" prime":"");bubWrap.appendChild(bub);
