@@ -140,6 +140,8 @@
 #view #office-visual .office-bubble{position:absolute;top:3px;left:50%;transform:translateX(-50%);max-width:95%;padding:5px 7px;border-radius:9px;background:#f4f7ff;color:#1a2a3a;font:600 9px Inter,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 3px 10px #0006;opacity:0;transition:opacity .25s}
 #view #office-visual .office-room.talking .office-bubble{opacity:1}
 #view #office-visual .office-room.break .desk{opacity:.45}
+#view #office-visual .office-room.break .agent-stage:after{content:"💤";position:absolute;right:18%;top:18px;font-size:19px;animation:office-zzz 1.8s ease-in-out infinite}
+@keyframes office-zzz{0%,100%{opacity:.45;transform:translateY(5px) scale(.9)}50%{opacity:1;transform:translateY(-5px) scale(1.08)}}
 #view #office-visual .office-foot{display:flex;justify-content:space-between;gap:6px;margin-top:8px;font:9px Inter,sans-serif;color:#7893ae}
 #view #office-visual .office-foot b{color:#c8d9e9;font-weight:600}
 @keyframes office-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
@@ -193,6 +195,7 @@ input,select,textarea{min-width:0}
 </header>
 <main>
   <div id="view">
+    <section id="office-visual" aria-label="Animated 2D agent office"><div class="office-head"><div><div class="office-title">PRIME STATION · OFFICE FLOOR</div><div class="office-sub">LIVE CREW VIEW / WORK • BREAK • COLLABORATE</div></div><div class="office-live">● LIVE OFFICE</div></div><div class="office-grid" id="office-grid"></div></section>
     <div id="loading">BOOTING STATION…</div>
     <div id="err"></div><div class="toast" id="toast"></div>
     <div class="hud tl"><div>LOW EARTH ORBIT · ALT 408 KM</div><div id="hud-status">ALL SYSTEMS NOMINAL</div></div>
@@ -1135,7 +1138,7 @@ function renderOffice(time=0){
   });
 }
 function updateState(time){
-  refreshSchedule();let on=0;
+  renderOffice(time);refreshSchedule();let on=0;
   AGENTS.forEach(a=>{const w=isWorking(a),real=realWorking(a);if(w)on++;
     if(stateOn[a.id]!==w){stateOn[a.id]=w;const old=a.signT;a.signT=signTex(a,w);a.signM.material.map=a.signT;a.signM.material.emissiveMap=a.signT;a.signM.material.needsUpdate=true;old.dispose();
       a.rim.material.color.set(a.color).multiplyScalar(w?1.1:0.45);a.podLight.intensity=w?6:2;
