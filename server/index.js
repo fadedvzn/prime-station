@@ -12,7 +12,7 @@ const memberAuth=(req,res,next)=>{const v=readSession(req);if(!v||v.role!=='memb
 const names={mkt:'Paul',sales:'Sam',btc:'Matt',meme:'Dex',clip:'Peanut',rbx:'Gus'},valid=Object.keys(names),insert=db.prepare('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)');
 const newTask=(agent,title,prompt,status='queued')=>{const id=crypto.randomUUID(),now=Date.now();insert.run(id,agent,title,prompt,status,null,'{}',now,now);return id;};
 const getTask=id=>{const t=db.prepare('SELECT * FROM tasks WHERE id=?').get(id);return t?{...t,metadata:JSON.parse(t.metadata||'{}')}:null;};
-function update(id,patch){const t=getTask(id);if(!t)return;const v={...t,...patch,updated_at:Date.now()};db.prepare('UPDATE tasks SET title=?,prompt=?,status=?,output=?,metadata=?,updated_at=? WHERE id=?').run(v.title,v.prompt,v.status,v.output,JSON.stringify(v.metadata||{}),v.updated_at,id);}
+function update(id,patch){const t=getTask(id);if(!t)return;const v={...t,...patch,updated_at:Date.now()};db.prepare('UPDATE tasks SET title=?,prompt=?,status=?,output=?,metadata=?,updated_at=? WHERE id=?').run(v.title,v.prompt,v.status,v.output,JSON.stringify(v.metadata||{}),v.updated_at,id);if(t.status!==v.status)audit('task_status_changed',{taskId:id,agent:t.agent,title:v.title,status:v.status});}
 const upload=multer({dest:uploads,limits:{fileSize:500*1024*1024},fileFilter:(req,f,cb)=>cb(null,['.mp4','.mov','.webm','.m4v','.rbxl','.rbxlx'].includes(path.extname(f.originalname).toLowerCase()))});
 const states=new Map();
 app.get('/api/health',(q,s)=>s.json({ok:true,app:'Prime Station'}));app.get('/api/me',(q,s)=>{const v=readSession(q);s.json({authenticated:isAuth(q),role:isAuth(q)?'owner':v?.role||null,name:v?.name||'Owner'});});
