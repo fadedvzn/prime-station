@@ -1,0 +1,27 @@
+name: Package Prime Station source ZIP
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/package-source.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Build ZIP
+        run: |
+          git archive --format=zip --output=Prime-Station-source.zip HEAD
+      - name: Upload ZIP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Prime-Station-source
+          path: Prime-Station-source.zip
+          if-no-files-found: error
+          retention-days: 7
