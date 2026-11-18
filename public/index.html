@@ -901,7 +901,7 @@ function renderControls(){
   const projectSelect=document.getElementById("project-select");projectSelect.value=activeProject;
   projectSelect.addEventListener("change",()=>{activeProject=projectSelect.value;const lab=document.getElementById("chat-project-label");if(lab)lab.textContent=projectLabel(activeProject);renderCollab();});
   document.getElementById("join-project").onclick=()=>{const loc=activeProject==="general"?"roam":"pod-"+activeProject;room.presence({loc}).catch(()=>{});const me=guests.get(myPeer);if(me)focusOn(me.fig);};
-  const sendProjectChat=()=>{const input=document.getElementById("project-chat-input"),v=clean(input.value,240).trim();if(!v)return;const at=Date.now();const nick=clean(nickIn?.value||"",24)||"You";room.presence({chatText:v,chatProject:activeProject,chatAt:at}).catch(()=>{});addChatMessage({id:"self-"+at,by:nick,text:v,project:activeProject,at});say(guests.get(myPeer)?.fig,v,3500);input.value="";};
+  const sendProjectChat=()=>{const input=document.getElementById("project-chat-input"),v=clean(input.value,240).trim();if(!v)return;const at=Date.now();const nick=clean(nickIn?.value||"",24)||"You";room.presence({chatText:v,chatProject:activeProject,chatAt:at}).catch(()=>{});const self=guests.get(myPeer);if(self)self.chatAt=at;addChatMessage({id:(myPeer||"self")+"-"+at,by:nick,text:v,project:activeProject,at});say(self?.fig,v,3500);input.value="";};
   document.getElementById("project-chat-send").onclick=sendProjectChat;
   document.getElementById("project-chat-input").addEventListener("keydown",e=>{if(e.key==="Enter")sendProjectChat();});
   const nickIn=document.getElementById("nick");let savedNick="";try{savedNick=localStorage.getItem("ps-nick")||"";}catch(e){}
