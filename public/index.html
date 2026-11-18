@@ -1860,6 +1860,32 @@ aside .sec{min-width:0!important;margin:0!important;height:100%}
 }
 
 /* Recalculate the WebGL drawing size after applying the larger view */
+
+/* Ensure all station workspace panels remain visible */
+aside{display:grid!important;visibility:visible!important}
+aside>#collab,
+aside>.sec:not(#folder-sec):not(.feedwrap),
+aside>.feedwrap{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  position:relative!important;
+  min-width:0!important;
+}
+aside>#collab{grid-column:1/-1!important;grid-row:1!important}
+aside>.sec:not(#collab):not(#folder-sec):not(.feedwrap){grid-column:1!important;grid-row:2!important}
+aside>.feedwrap{grid-column:3!important;grid-row:2!important}
+aside>#folder-sec:not([style*="display: none"]){grid-column:2!important;grid-row:2!important}
+#collab-body,#crew{display:block!important;visibility:visible!important;min-height:40px}
+@media(max-width:1050px){
+ aside>#collab{grid-column:1/-1!important;grid-row:1!important}
+ aside>.sec:not(#collab):not(#folder-sec):not(.feedwrap){grid-column:1!important;grid-row:2!important}
+ aside>.feedwrap{grid-column:1/-1!important;grid-row:3!important}
+}
+@media(max-width:650px){
+ aside>#collab,aside>.sec:not(#collab):not(#folder-sec):not(.feedwrap),aside>.feedwrap{grid-column:1!important;grid-row:auto!important}
+}
+
 </style>
 <script>window.dispatchEvent(new Event("resize"));</script>
 </body>
