@@ -115,6 +115,39 @@
   #feed{flex:1;overflow:auto;font:12px ui-monospace,Menlo,monospace;color:#b8bdd3;padding-right:4px;max-height:420px}
   #feed div{padding:4px 0;border-bottom:1px dashed #151a2a}
 
+/* ===== Animated 2D office floor ===== */
+#view{height:auto!important;min-height:0!important;max-height:none!important;padding:0!important;background:#091321!important;overflow:hidden}
+#view:before,#view:after{display:none!important}
+#view #office-visual{display:block!important;position:relative;inset:auto;padding:18px clamp(12px,2.5vw,30px) 22px;min-height:340px;background:radial-gradient(ellipse at 50% 0%,#193553 0%,transparent 68%),linear-gradient(145deg,#0d1b2d,#091321 70%)}
+#view #office-visual .office-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px}
+#view #office-visual .office-title{font:800 13px Orbitron,Inter,sans-serif;letter-spacing:2px;color:#eaf6ff}
+#view #office-visual .office-sub{font:10px Inter,sans-serif;color:#88a8c5;letter-spacing:1px;margin-top:4px}
+#view #office-visual .office-live{font:700 9px Orbitron,sans-serif;color:#8be6c1;border:1px solid #285d54;background:#102c2b;padding:6px 9px;border-radius:999px;white-space:nowrap}
+#view #office-visual .office-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+#view #office-visual .office-room{position:relative;min-width:0;min-height:230px;padding:12px 9px 10px;border:1px solid #29425d;border-radius:13px;background:linear-gradient(160deg,#172b42,#101d30 68%,#0b1726);box-shadow:inset 0 1px #ffffff0c,0 8px 18px #0003;overflow:hidden}
+#view #office-visual .office-room:before{content:"";position:absolute;inset:0 0 auto;height:4px;background:var(--agent-color);opacity:.85}
+#view #office-visual .room-name{font:700 10px Orbitron,sans-serif;letter-spacing:1px;color:#e5f2ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#view #office-visual .room-role{font:10px Inter,sans-serif;color:#8ea6c1;margin-top:4px;min-height:24px}
+#view #office-visual .agent-stage{height:112px;position:relative;display:flex;align-items:center;justify-content:center}
+#view #office-visual .agent-avatar{font-size:39px;filter:drop-shadow(0 5px 5px #0008);animation:office-bob 2.2s ease-in-out infinite}
+#view #office-visual .office-room.break .agent-avatar{animation:office-sleep 2.8s ease-in-out infinite;filter:grayscale(.35) drop-shadow(0 5px 5px #0008)}
+#view #office-visual .desk{position:absolute;bottom:7px;left:12%;right:12%;height:23px;border:1px solid #52718f;border-radius:5px;background:linear-gradient(#38536d,#20374f);box-shadow:0 5px 0 #0a1421}
+#view #office-visual .desk:before{content:"";position:absolute;left:50%;top:-27px;transform:translateX(-50%);width:34px;height:22px;border:2px solid #6e91ad;border-radius:4px;background:linear-gradient(135deg,#1b344b,#071321);box-shadow:0 0 12px #73d9ff25}
+#view #office-visual .desk:after{content:"⌨";position:absolute;left:50%;top:2px;transform:translateX(-50%);font-size:10px;color:#9fc5df}
+#view #office-visual .agent-state{display:flex;justify-content:center;align-items:center;gap:5px;font:700 9px Orbitron,sans-serif;letter-spacing:.7px;color:#9bd9c5;margin-top:7px}
+#view #office-visual .office-room.break .agent-state{color:#d6c3ff}
+#view #office-visual .office-room.talking .agent-state{color:#ffe19a}
+#view #office-visual .office-bubble{position:absolute;top:3px;left:50%;transform:translateX(-50%);max-width:95%;padding:5px 7px;border-radius:9px;background:#f4f7ff;color:#1a2a3a;font:600 9px Inter,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 3px 10px #0006;opacity:0;transition:opacity .25s}
+#view #office-visual .office-room.talking .office-bubble{opacity:1}
+#view #office-visual .office-room.break .desk{opacity:.45}
+#view #office-visual .office-foot{display:flex;justify-content:space-between;gap:6px;margin-top:8px;font:9px Inter,sans-serif;color:#7893ae}
+#view #office-visual .office-foot b{color:#c8d9e9;font-weight:600}
+@keyframes office-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes office-sleep{0%,100%{transform:translateY(3px) rotate(-7deg)}50%{transform:translateY(7px) rotate(-2deg)}}
+@media(max-width:900px){#view #office-visual .office-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:560px){#view #office-visual .office-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#view #office-visual{min-height:0}}
+@media(max-width:360px){#view #office-visual .office-grid{grid-template-columns:1fr}}
+
 /* ===== Prime Station: clean 2D responsive dashboard ===== */
 :root{--bg:#080b13;--panel:#101726;--line:#263247;--text:#edf3ff;--muted:#9aa8bd;--prime:#73d9ff}
 html,body{min-height:100%;overflow-x:hidden}
@@ -123,7 +156,7 @@ header{position:sticky;top:0;z-index:30;padding:12px clamp(14px,2vw,28px);backgr
 .hstats{gap:10px 18px;flex-wrap:wrap;font-size:10px}
 main{display:flex;flex-direction:column;min-height:calc(100vh - 60px);width:100%;max-width:1600px;margin:0 auto}
 #view{height:132px;min-height:132px;max-height:132px;flex:none;overflow:hidden;background:radial-gradient(ellipse at 80% 0%,#153a58 0%,transparent 42%),linear-gradient(115deg,#101b2d,#0b1220 55%,#101b2d);border-bottom:1px solid #263247}
-#view canvas,#view>div:not(.hud):not(.ctrls):not(.toast):not(#loading):not(#err){display:none!important}
+#view canvas,#view>div:not(.hud):not(.ctrls):not(.toast):not(#loading):not(#err):not(#office-visual){display:none!important}
 #view .hud,#view .ctrls,#view #loading{display:none!important}
 #view:before{content:"PRIME STATION";display:block;padding:30px clamp(18px,4vw,54px) 0;font:900 clamp(21px,3vw,32px) Orbitron,Inter,sans-serif;letter-spacing:3px;color:#edf7ff}
 #view:after{content:"AGENT COMMAND CENTER  /  CONNECT • CREATE • AUTOMATE";display:block;padding:8px clamp(18px,4vw,54px);font:600 10px Inter,sans-serif;letter-spacing:2px;color:#8fb8d5}
@@ -1079,6 +1112,28 @@ function driveMe(dt){return; /* retained below for legacy 3D compatibility */
 
 /* =========================== STATE UPDATES =========================== */
 const stateOn={};
+function renderOffice(time=0){
+  const grid=document.getElementById("office-grid");if(!grid)return;
+  if(!grid.dataset.ready){
+    grid.innerHTML=AGENTS.map(a=>`<article class="office-room" id="office-${a.id}" style="--agent-color:${a.color}">
+      <div class="room-name">${a.name.toUpperCase()} · OFFICE</div><div class="room-role">${a.role}</div>
+      <div class="agent-stage"><div class="office-bubble" id="office-bubble-${a.id}">Quick sync?</div><div class="agent-avatar">${a.icon}</div><div class="desk"></div></div>
+      <div class="agent-state" id="office-state-${a.id}">● READY</div>
+      <div class="office-foot"><span>WORKSPACE</span><b id="office-task-${a.id}">Standing by</b></div>
+    </article>`).join("");
+    grid.dataset.ready="1";
+  }
+  const cycle=Math.floor(time/8),talking=cycle%AGENTS.length,active=(time%8)<4;
+  AGENTS.forEach((a,i)=>{
+    const room=document.getElementById("office-"+a.id),state=document.getElementById("office-state-"+a.id),task=document.getElementById("office-task-"+a.id),bubble=document.getElementById("office-bubble-"+a.id);
+    if(!room)return;
+    const working=isWorking(a),chat=active&&(i===talking||i===(talking+1)%AGENTS.length),breakTime=!working&&!chat;
+    room.classList.toggle("break",breakTime);room.classList.toggle("talking",chat);
+    state.textContent=chat?"● CHATTING":working?"● WORKING":"● ON BREAK";
+    task.textContent=chat?"Sharing ideas":working?(a.steps?.[Math.floor(time/5)%a.steps.length]||"Working on tasks"): "Recharging";
+    bubble.textContent=i===talking?["Got an idea!","Can you review this?","Let's team up!","Here's a suggestion!"][cycle%4]:"Listening…";
+  });
+}
 function updateState(time){
   refreshSchedule();let on=0;
   AGENTS.forEach(a=>{const w=isWorking(a),real=realWorking(a);if(w)on++;
