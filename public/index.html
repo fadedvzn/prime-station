@@ -322,35 +322,6 @@ input,select,textarea{min-width:0}
 </header>
 <main>
   <div id="view">
-    <section id="office-visual" aria-label="Animated 2D command dungeon"><div class="office-head"><div><div class="office-title">PRIME STATION · COMMAND DUNGEON</div><div class="office-sub">LIVE AGENT CHAMBERS / RESEARCH • BUILD • REPORT</div></div><div class="office-live">● LIVE DUNGEON</div></div><div class="dungeon-map" id="dungeon-map" aria-label="3D command fortress with six agent dungeons surrounding Prime">
-  <svg class="dungeon-pipes" viewBox="0 0 900 650" preserveAspectRatio="none" aria-hidden="true">
-    <defs><filter id="pipe-glow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
-    <g class="pipe-lines" filter="url(#pipe-glow)">
-      <path d="M150 100 L450 325 M450 100 L450 325 M750 100 L450 325 M150 325 L450 325 M750 325 L450 325 M150 550 L450 325 M450 550 L450 325 M750 550 L450 325"/>
-    </g>
-    <g class="pipe-pulses"><circle r="5"><animateMotion dur="3.8s" repeatCount="indefinite" path="M150 100 L450 325"/></circle><circle r="5"><animateMotion dur="4.2s" begin="-.8s" repeatCount="indefinite" path="M450 100 L450 325"/></circle><circle r="5"><animateMotion dur="4.5s" begin="-1.4s" repeatCount="indefinite" path="M750 100 L450 325"/></circle><circle r="5"><animateMotion dur="3.9s" begin="-2s" repeatCount="indefinite" path="M150 325 L450 325"/></circle><circle r="5"><animateMotion dur="4.4s" begin="-1s" repeatCount="indefinite" path="M750 325 L450 325"/></circle><circle r="5"><animateMotion dur="4s" begin="-2.3s" repeatCount="indefinite" path="M150 550 L450 325"/></circle><circle r="5"><animateMotion dur="4.7s" begin="-1.8s" repeatCount="indefinite" path="M450 550 L450 325"/></circle><circle r="5"><animateMotion dur="4.1s" begin="-2.8s" repeatCount="indefinite" path="M750 550 L450 325"/></circle></g>
-  </svg>
-  <article class="dungeon-room room-paul" data-agent="mkt" style="--glow:#ff895e"><div class="room-roof"></div><div class="dungeon-label">PAUL <small>HYPE STUDIO</small></div><div class="dungeon-prop">📣</div><div class="dungeon-desk">▰ <i>▰</i></div><div class="dungeon-status" id="dungeon-state-mkt">● STANDBY</div></article>
-  <article class="dungeon-room room-sam" data-agent="sales" style="--glow:#43dfa1"><div class="room-roof"></div><div class="dungeon-label">SAM <small>DEAL CENTER</small></div><div class="dungeon-prop">💼</div><div class="dungeon-desk">▰ <i>▰</i></div><div class="dungeon-status" id="dungeon-state-sales">● STANDBY</div></article>
-  <article class="dungeon-room room-dex" data-agent="meme" style="--glow:#bd9aff"><div class="room-roof"></div><div class="dungeon-label">DEX <small>MEME MARKET</small></div><div class="dungeon-prop">🐸</div><div class="dungeon-desk">▰ <i>▰</i></div><div class="dungeon-status" id="dungeon-state-meme">● STANDBY</div></article>
-  <article class="dungeon-room room-matt" data-agent="btc" style="--glow:#f3bd61"><div class="room-roof"></div><div class="dungeon-label">MATT <small>BTC WATCHTOWER</small></div><div class="dungeon-prop">₿</div><div class="dungeon-desk">▰ <i>▰</i></div><div class="dungeon-status" id="dungeon-state-btc">● STANDBY</div></article>
-  <article class="dungeon-room room-peanut" data-agent="peanut" style="--glow:#e9a4ce"><div class="room-roof"></div><div class="dungeon-label">PEANUT <small>INTEL VAULT</small></div><div class="dungeon-prop">🥜</div><div class="dungeon-desk">▰ <i>▰</i></div><div class="dungeon-status" id="dungeon-state-peanut">● STANDBY</div></article>
-  <article class="dungeon-room room-gus" data-agent="gus" style="--glow:#7fc9ff"><div class="room-roof"></div><div class="dungeon-label">GUS <small>OPS FORGE</small></div><div class="dungeon-prop">⚙️</div><div class="dungeon-desk">▰ <i>▰</i></div><div class="dungeon-status" id="dungeon-state-gus">● STANDBY</div></article>
-  <section class="prime-throne" aria-label="Prime central command"><div class="throne-crown">♛</div><div class="prime-title">PRIME</div><div class="prime-subtitle">MAIN BOSS · CENTRAL COMMAND</div><div class="holo-table"><span>⌘</span><i></i></div><div class="prime-inbox" id="dungeon-inbox">INBOX · WAITING FOR DATA</div><div class="prime-directive">RESEARCH · FILES · IDEAS · ALERTS</div></section>
-</div>
-<div class="dungeon-legend"><span><i></i> LIVE DATA CONDUITS</span><span>8 ROUTES · 1 CENTRAL COMMAND</span><b id="dungeon-file-count">0 FILES RECEIVED</b></div><div class="office-grid" id="office-grid"></div>
-      <section class="prime-pipeline" aria-label="Agent file delivery pipeline">
-        <div class="pipeline-top"><div><b>UNDERGROUND DATA CONDUIT</b><small>Research packets travel through the pipe network to the Main Boss</small></div><span class="pipeline-count" id="pipeline-count">0 FILES RECEIVED</span></div>
-        <div class="pipeline-track">
-          <div class="pipe-node"><span>📥</span><b>AGENT OUTPUT</b><small>Drafts & research</small></div>
-          <div class="pipe-rail"><i></i><i></i><i></i><div class="pipe-packet">📄</div></div>
-          <div class="pipe-node"><span>🛡️</span><b>QUALITY CHECK</b><small>Review & approval</small></div>
-          <div class="pipe-rail"><i></i><i></i><i></i><div class="pipe-packet delay">📁</div></div>
-          <div class="prime-node"><span>👑</span><b>PRIME · MAIN BOSS</b><small>Final delivery</small><em id="prime-inbox-count">COMMAND INBOX · 0</em></div>
-        </div>
-        <div class="pipeline-foot"><span><i></i> LIVE VISUAL FLOW</span><span>Approved work stays under your control before publishing.</span></div>
-      </section>
-    </section>
     <div id="loading">BOOTING STATION…</div>
     <div id="err"></div><div class="toast" id="toast"></div>
     <div class="hud tl"><div>LOW EARTH ORBIT · ALT 408 KM</div><div id="hud-status">ALL SYSTEMS NOMINAL</div></div>
@@ -368,52 +339,10 @@ input,select,textarea{min-width:0}
   </aside>
 </main>
 
-<style>
-/* Prime Station 2D-first mode: the dungeon must remain usable without WebGL/CDN imports. */
-#view canvas,.hud,.ctrls,#loading,#err{display:none!important}
-#view{display:block!important;height:auto!important;min-height:0!important}
-#view #office-visual{display:block!important}
-@media(max-width:700px){#view #office-visual .office-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-</style>
 <script>
-(function(){
- const agents=[
-  {id:"mkt",name:"PAUL",role:"Marketing",icon:"📣",color:"#ff7a45"},
-  {id:"sales",name:"SAM",role:"Sales",icon:"💼",color:"#3ddc97"},
-  {id:"btc",name:"MATT",role:"Bitcoin research",icon:"₿",color:"#f2bb4b"},
-  {id:"meme",name:"DEX",role:"Meme coin analyst · paper trading",icon:"🐸",color:"#b58cff"},
-  {id:"clip",name:"PEANUT",role:"Clip scout",icon:"🎬",color:"#65c8ff"},
-  {id:"rbx",name:"GUS",role:"Roblox",icon:"🎮",color:"#ff7ca8"}
- ];
- const grid=document.getElementById("office-grid");
- if(grid&&!grid.dataset.ready){
-  grid.innerHTML=agents.map((a,i)=>'<article class="office-room" id="office-'+a.id+'" style="--agent-color:'+a.color+';--walk-delay:'+(i*.23)+'s"><div class="room-name"><span class="room-light"></span>'+a.name+' · CHAMBER</div><div class="room-role">'+a.role+'</div><div class="agent-stage"><div class="office-bubble" id="office-bubble-'+a.id+'">Awaiting assignment</div><div class="walk-path"></div><div class="agent-avatar">'+a.icon+'</div><div class="desk"><span>▰</span></div></div><div class="agent-state" id="office-state-'+a.id+'">● STANDBY</div><div class="office-foot"><span>LIVE TASK</span><b id="office-task-'+a.id+'">Waiting for a task</b></div></article>').join("");
-  grid.dataset.ready="1";
- }
- async function refresh(){
-  try{
-   const r=await fetch("/api/tasks",{credentials:"same-origin"});if(!r.ok)return;
-   const tasks=await r.json(),latest={};
-   for(const t of tasks){if(!latest[t.agent])latest[t.agent]=t;}
-   let received=0;
-   agents.forEach(a=>{
-    const t=latest[a.id],room=document.getElementById("office-"+a.id);if(!room)return;
-    const state=document.getElementById("office-state-"+a.id),title=document.getElementById("office-task-"+a.id),bubble=document.getElementById("office-bubble-"+a.id);
-    const status=t?.status||"idle",working=status==="running",queued=status==="queued",review=["review","approved","published"].includes(status);
-    room.classList.toggle("break",!working&&!queued);room.classList.toggle("working",working);
-    state.textContent=working?"● WORKING":queued?"● QUEUED":review?"● FILE SENT TO PRIME":status==="failed"?"● BLOCKED":"● STANDBY";
-    title.textContent=t?.title||"Waiting for a task";
-    bubble.textContent=working?"Researching / processing…":queued?"Waiting in task queue":review?"Report sent through the data pipe":status==="failed"?"Task needs attention":"Awaiting assignment";
-    if(t?.output&&review)received++;
-   });
-   const badge=document.getElementById("pipeline-count"),inbox=document.getElementById("prime-inbox-count");
-   if(badge)badge.textContent=received+" FILE"+(received===1?"":"S")+" RECEIVED";
-   if(inbox)inbox.textContent="COMMAND INBOX · "+received;
-  }catch(e){/* 2D dungeon stays visible if the owner is signed out or the API is offline. */}
- }
- refresh();setInterval(refresh,5000);
- window.addEventListener("error",e=>console.warn("Optional 3D layer unavailable; 2D dungeon remains active.",e.message));
-})();
+  // show load errors on screen
+  window.addEventListener("error",e=>{const el=document.getElementById("err");el.style.display="flex";el.textContent="Station error: "+(e.message||"failed to load 3D engine");});
+  setTimeout(()=>{if(!window.__stationOK){const el=document.getElementById("err");el.style.display="flex";el.textContent="The 3D engine didn't load. Check your connection and refresh.";}},15000);
 </script>
 
 <script type="module">
