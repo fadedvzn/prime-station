@@ -1944,6 +1944,69 @@ aside>#folder-sec:not([style*="display: none"]){grid-column:2!important;grid-row
  aside>#collab,aside>.sec:not(#collab):not(#folder-sec):not(.feedwrap),aside>.feedwrap{grid-column:1!important;grid-row:auto!important}
 }
 
+
+/* Stable fallback layout: stack every workspace panel beneath the station.
+   Avoid grid placement so no panel can be pushed into an empty column. */
+main{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  width:100%!important;
+  max-width:1800px!important;
+  min-height:0!important;
+}
+#view{
+  width:100%!important;
+  flex:none!important;
+}
+aside{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  justify-content:flex-start!important;
+  gap:12px!important;
+  width:100%!important;
+  max-height:none!important;
+  height:auto!important;
+  overflow:visible!important;
+  padding:12px!important;
+  box-sizing:border-box!important;
+  border-left:0!important;
+  border-top:1px solid var(--line)!important;
+}
+aside>.sec{
+  display:block!important;
+  position:relative!important;
+  float:none!important;
+  grid-column:auto!important;
+  grid-row:auto!important;
+  order:0!important;
+  width:100%!important;
+  min-width:0!important;
+  height:auto!important;
+  max-height:none!important;
+  box-sizing:border-box!important;
+  visibility:visible!important;
+  opacity:1!important;
+}
+aside>#collab{order:1!important}
+aside>.sec:not(#collab):not(#folder-sec):not(.feedwrap){order:2!important}
+aside>#folder-sec{order:3!important}
+aside>.feedwrap{order:4!important}
+#collab-body,#crew,#feed,.folder{
+  display:block!important;
+  visibility:visible!important;
+  width:100%!important;
+  min-height:44px!important;
+  max-height:560px!important;
+  overflow:auto!important;
+}
+aside>#folder-sec[style*="display: none"]{display:none!important}
+@media(max-width:650px){
+  aside{padding:8px!important;gap:8px!important}
+  #view{min-height:430px!important;height:62vh!important;max-height:620px!important}
+}
+
 </style>
 <script>window.dispatchEvent(new Event("resize"));</script>
 </body>
