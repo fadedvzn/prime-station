@@ -78,6 +78,16 @@
   .who b{color:#edf3ff;white-space:nowrap}
   .who span{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
   .playerlist-title{display:flex;align-items:center;justify-content:space-between;margin:14px 0 7px;font:700 11px Orbitron,sans-serif;letter-spacing:1.5px;color:#9fb3cc}
+  .project-tools{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin:10px 0}
+  .project-members{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 12px}
+  .project-chip{font-size:11px;padding:6px 9px;border:1px solid #30445f;border-radius:999px;background:#101a2a;color:#dceaff}
+  .chatbox{border:1px solid #263247;border-radius:10px;background:#09111e;padding:10px;margin-top:8px}
+  .chatlog{height:190px;overflow:auto;display:flex;flex-direction:column;gap:7px}
+  .chatmsg{max-width:92%;padding:7px 9px;border-radius:9px;background:#15243a;font-size:12px;overflow-wrap:anywhere}
+  .chatmsg.mine{align-self:flex-end;background:#12364b}
+  .chatmsg b{display:block;font-size:10px;color:#8fdfff;margin-bottom:3px}
+  .chat-compose{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;margin-top:8px}
+  .chat-compose input{width:100%;min-width:0}
   .playerlist-title small{font:600 10px Inter,sans-serif;color:#73d9ff;letter-spacing:0}
 .toast{position:absolute;left:50%;top:16px;transform:translate(-50%,-20px);opacity:0;z-index:7;pointer-events:none;transition:.35s;
     font:700 14px Inter;color:#fff;padding:10px 18px;border-radius:999px;background:#0b0e17ee;border:1px solid var(--c);box-shadow:0 0 18px var(--c)}
@@ -768,6 +778,9 @@ async function primeLife(){
 
 /* =========================== COLLAB (shared room) =========================== */
 const guests=new Map();
+const chatMessages=[];let activeProject="general";
+const projectLabel=id=>({general:"Station-wide",mkt:"RVZN brand",sales:"Web design & sales",btc:"Learning to trade",clip:"Clips & content",rbx:"Roblox games"}[id]||"Project");
+function addChatMessage(msg){if(!msg||!msg.text)return;const id=String(msg.id||"");if(id&&chatMessages.some(x=>x.id===id))return;chatMessages.push({id:id||String(Date.now()),by:clean(msg.by,24)||"Guest",text:clean(msg.text,240),project:STATIONS&&STATIONS[msg.project]?msg.project:"general",at:Number(msg.at)||Date.now()});while(chatMessages.length>100)chatMessages.shift();renderChat();}
 const PALETTE=["#4fc3ff","#ff9f43","#2ee6a6","#ff6bcb","#a3e635","#facc15","#60a5fa","#f472b6"];
 function hashColor(x){let h=0;for(const c of String(x))h=(h*31+c.charCodeAt(0))|0;return PALETTE[Math.abs(h)%PALETTE.length];}
 const clean=(x,n)=>String(x||"").replace(/[\u0000-\u001f\u007f-\u009f​-‏‪-‮⁠-⁯﻿]/g,"").slice(0,n);
@@ -831,6 +844,7 @@ function syncPeers(peers){
     const key=loc==="free"?`free|${pr.x}|${pr.z}`:loc;
     if(key!==g.lockey){g.lockey=key;g.loc=loc;g.tx=pr.x;g.tz=pr.z;if(!(g.me&&loc==="free"&&Date.now()-lastDrive<600))moveGuest(p.peer);}
     if(pr.saidAt&&pr.saidAt!==g.saidAt&&pr.said){g.saidAt=pr.saidAt;const m=clean(pr.said,140);say(g.fig,m,5000);logSafe([g.name,g.color],": "+m);}
+    if(pr.chatAt&&pr.chatAt!==g.chatAt&&pr.chatText){g.chatAt=pr.chatAt;addChatMessage({id:p.peer+"-"+pr.chatAt,by:g.me?"You":g.name,text:pr.chatText,project:pr.chatProject,at:pr.chatAt});}
   }
   for(const [peer,g] of guests)if(!seen.has(peer)){if(g.desk!=null)CDESKS[g.desk].scr.color.set(0x0a0e16);scene.remove(g.fig.root);g.fig.root.traverse(o=>{if(o.element)o.element.remove();});guests.delete(peer);logSafe([g.name,g.color]," left the station");toast(g.name,g.color,"left the station");}
   updateBays();resolveNames();renderCollab();
@@ -843,15 +857,32 @@ function renderCollab(){
   const count=document.getElementById("player-count");if(count)count.textContent=`${guests.size} ONLINE`;
   for(const g of guests.values()){const d=document.createElement("div"),i=document.createElement("i"),n=document.createElement("b"),sp=document.createElement("span");
     i.style.background=g.color;i.style.color=g.color;n.textContent=g.me?"You (you)":g.name;
-    const place=({roam:"Exploring",cafe:"Café",lounge:"Lounge","meet-a":"Meeting room","meet-b":"Meeting room",holo:"Holo map",prime:"With Prime",bay:"My bay"}[g.loc]||(g.loc&&g.loc.startsWith("desk-")?"At a desk":"Online"));
+    const place=g.loc&&g.loc.startsWith("pod-")?projectLabel(g.loc.slice(4)):({roam:"Exploring",cafe:"Café",lounge:"Lounge","meet-a":"Meeting room","meet-b":"Meeting room",holo:"Holo map",prime:"With Prime",bay:"My bay"}[g.loc]||(g.loc&&g.loc.startsWith("desk-")?"At a desk":"Online"));
     sp.textContent=" — "+(g.status||place);
     d.append(i,n,sp);who.append(d);}
+  const members=document.getElementById("project-members");if(members){members.textContent="";const active=[...guests.values()].filter(g=>g.loc==="pod-"+activeProject);if(!active.length){members.textContent="No one is in this project yet.";members.style.color="var(--muted)";}else{members.style.color="";active.forEach(g=>{const chip=document.createElement("span");chip.className="project-chip";chip.textContent=(g.me?"You":g.name)+" · contributing";chip.style.borderColor=g.color;members.append(chip);});}}
+  renderChat();
+}
+function renderChat(){
+  const box=document.getElementById("chatlog");if(!box)return;box.textContent="";
+  const items=chatMessages.filter(m=>m.project===activeProject).slice(-40);
+  if(!items.length){const empty=document.createElement("div");empty.style.cssText="color:var(--muted);font-size:12px";empty.textContent="No messages yet. Start the conversation.";box.append(empty);}
+  for(const m of items){const d=document.createElement("div");d.className="chatmsg"+(m.by==="You"?" mine":"");const b=document.createElement("b");b.textContent=m.by+" · "+new Date(m.at).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});const t=document.createElement("span");t.textContent=m.text;d.append(b,t);box.append(d);}
+  box.scrollTop=box.scrollHeight;
+  const count=document.getElementById("project-count");if(count)count.textContent=`${[...guests.values()].filter(g=>g.loc==="pod-"+activeProject).length} CONTRIBUTING`;
+  const lab=document.getElementById("chat-project-label");if(lab)lab.textContent=projectLabel(activeProject);
 }
 function renderControls(){
   collabBody.innerHTML=`<p>You're aboard. Anyone you share this page with shows up on the Collab Deck too, walking around and working with you.</p>
     <p id="mybay" style="color:#bfefff"></p>
     <div class="playerlist-title"><span>PLAYER LIST</span><small id="player-count">0 ONLINE</small></div>
     <div class="who" id="who" aria-live="polite"></div>
+    <div class="playerlist-title"><span>PROJECT WORKSPACE</span><small id="project-count">0 CONTRIBUTING</small></div>
+    <div class="project-tools"><select id="project-select"><option value="general">Station-wide</option>${AGENTS.map(a=>`<option value="${a.id}">${PROJ[a.id][0]} ${PROJ[a.id][1]}</option>`).join("")}</select><button class="cbtn" id="join-project">Join project</button></div>
+    <div class="project-members" id="project-members">No one is in this project yet.</div>
+    <div class="playerlist-title"><span>PROJECT CHAT</span><small id="chat-project-label">Station-wide</small></div>
+    <div class="chatbox"><div class="chatlog" id="chatlog" aria-live="polite"><div style="color:var(--muted);font-size:12px">Messages from this workspace will appear here.</div></div>
+      <div class="chat-compose"><input id="project-chat-input" maxlength="240" placeholder="Message this project…"><button class="cbtn" id="project-chat-send">Send</button></div></div>
     <p style="margin:12px 0 6px;font-size:11px;color:var(--muted)">Set your station status</p>
     <input id="nick" maxlength="24" placeholder="Your name on the station">
     <input id="status" maxlength="80" placeholder="What are you working on? (e.g. RVZN drop)">
@@ -867,6 +898,12 @@ function renderControls(){
     room.presence({loc}).catch(()=>{});const me=guests.get(myPeer);if(me)focusOn(me.fig);
     if(loc.startsWith("pod-")){const sel=document.getElementById("sg-station");if(sel)sel.value=loc.slice(4);}});
   document.getElementById("sg-send").onclick=submitIdea;
+  const projectSelect=document.getElementById("project-select");projectSelect.value=activeProject;
+  projectSelect.addEventListener("change",()=>{activeProject=projectSelect.value;const lab=document.getElementById("chat-project-label");if(lab)lab.textContent=projectLabel(activeProject);renderCollab();});
+  document.getElementById("join-project").onclick=()=>{const loc=activeProject==="general"?"roam":"pod-"+activeProject;room.presence({loc}).catch(()=>{});const me=guests.get(myPeer);if(me)focusOn(me.fig);};
+  const sendProjectChat=()=>{const input=document.getElementById("project-chat-input"),v=clean(input.value,240).trim();if(!v)return;const at=Date.now();const nick=clean(nickIn?.value||"",24)||"You";room.presence({chatText:v,chatProject:activeProject,chatAt:at}).catch(()=>{});addChatMessage({id:"self-"+at,by:nick,text:v,project:activeProject,at});say(guests.get(myPeer)?.fig,v,3500);input.value="";};
+  document.getElementById("project-chat-send").onclick=sendProjectChat;
+  document.getElementById("project-chat-input").addEventListener("keydown",e=>{if(e.key==="Enter")sendProjectChat();});
   const nickIn=document.getElementById("nick");let savedNick="";try{savedNick=localStorage.getItem("ps-nick")||"";}catch(e){}
   nickIn.value=savedNick;if(savedNick)room.presence({nick:clean(savedNick,24)}).catch(()=>{});
   let nkT;nickIn.addEventListener("input",()=>{clearTimeout(nkT);nkT=setTimeout(()=>{const v=clean(nickIn.value,24).trim();try{localStorage.setItem("ps-nick",v);}catch(e){}room.presence({nick:v||null}).catch(()=>{});},500);});
