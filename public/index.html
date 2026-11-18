@@ -871,7 +871,7 @@ async function cafeBreak(f,name){
   await wait(rnd(5000,9000));s.taken=null;f.pose="stand";}
 /* ---------- huddles in Meeting Room A ---------- */
 let huddle=null;
-const HUDDLE_LINES={mkt:"Marketing pack gets built Sunday night.",sales:"New leads and follow-ups every night.",btc:"Watching BTC on the night shift — 10 PM and 2 AM checks.",clip:"Clip digest every night.",rbx:"New Roblox build pack Wed & Sat nights."};
+const HUDDLE_LINES={mkt:"Marketing pack gets built Sunday night.",sales:"New leads and follow-ups every night.",meme:"Scanning meme coins and preparing paper-trade plans only.",btc:"Watching BTC on the night shift — 10 PM and 2 AM checks.",clip:"Clip digest every night.",rbx:"New Roblox build pack Wed & Sat nights."};
 async function joinHuddle(a){const f=a.fig,s=MEET.A.seats[a.idx+1];await goHub(a,s.p);if(!huddle)return;faceTo(f,s.face);f.pose="sit";
   await wait(rnd(1500,9000));if(huddle){say(f,HUDDLE_LINES[a.id],3600);log(`${nm(a)} (huddle): ${HUDDLE_LINES[a.id]}`);}
   while(huddle&&!isWorking(a))await wait(800);f.pose="stand";}
@@ -1061,7 +1061,7 @@ function renderControls(){
 }
 /* ---------- Ideas board (db; only the owner writes) ---------- */
 let db=null,isOwner=false,ideas=[],ideaIds=new Set();const nameById={};
-const PROJ={mkt:["👕","RVZN brand"],sales:["💻","Web design & sales"],btc:["📈","Learning to trade"],clip:["🎬","Clips & content"],rbx:["🧱","Roblox games"]};
+const PROJ={mkt:["👕","RVZN brand"],sales:["💻","Web design & sales"],meme:["🐸","Meme coin research"],btc:["📈","Learning to trade"],clip:["🎬","Clips & content"],rbx:["🧱","Roblox games"]};
 const STATIONS={general:{name:"Anything else",color:"#7fe3ff",icon:"👑"}};AGENTS.forEach(a=>STATIONS[a.id]={name:PROJ[a.id][1],color:a.color,icon:PROJ[a.id][0]});
 let queue=[];try{queue=JSON.parse(localStorage.getItem("ps-sugg-queue")||"[]").filter(x=>x&&x.id&&x.text).slice(-8);}catch(e){queue=[];}
 function saveQueue(){try{localStorage.setItem("ps-sugg-queue",JSON.stringify(queue));}catch(e){}if(room&&!isOwner)room.presence({sugg:queue.length?queue:null}).catch(()=>{});}
