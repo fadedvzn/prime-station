@@ -1809,6 +1809,57 @@ boot();
 }
 </style>
 <script>
+
+/* Prime Station workspace layout: large 3D viewport + dedicated work columns */
+main{
+  display:flex!important;
+  flex-direction:column!important;
+  width:100%!important;
+  max-width:1800px!important;
+  margin:0 auto!important;
+}
+#view{
+  width:100%!important;
+  height:min(76vh,820px)!important;
+  min-height:580px!important;
+  max-height:820px!important;
+  flex:none!important;
+}
+aside{
+  display:grid!important;
+  grid-template-columns:minmax(230px,0.85fr) minmax(300px,1.15fr) minmax(230px,0.85fr)!important;
+  align-items:start!important;
+  gap:12px!important;
+  padding:12px!important;
+  max-height:none!important;
+  overflow:visible!important;
+}
+#collab{grid-column:1/-1!important}
+#folder-sec{grid-column:2!important;grid-row:2!important}
+aside>.sec:not(#collab):not(#folder-sec){grid-column:1!important;grid-row:2!important}
+aside>.feedwrap{grid-column:3!important;grid-row:2!important}
+aside .sec{min-width:0!important;margin:0!important;height:100%}
+#crew,.folder,#feed{max-height:560px!important;overflow:auto!important}
+.hud.tl{font-size:9px!important;letter-spacing:1px!important}
+.hud.bl{font-size:10px!important}
+.ctrls{gap:5px!important}
+.ctrls button{font-size:10px!important;padding:5px 8px!important}
+@media(max-width:1050px){
+  #view{height:68vh!important;min-height:500px!important}
+  aside{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  #collab{grid-column:1/-1!important}
+  #folder-sec{grid-column:2!important;grid-row:2!important}
+  aside>.sec:not(#collab):not(#folder-sec){grid-column:1!important;grid-row:2!important}
+  aside>.feedwrap{grid-column:1/-1!important;grid-row:3!important}
+}
+@media(max-width:650px){
+  #view{height:62vh!important;min-height:430px!important;max-height:620px!important}
+  aside{grid-template-columns:minmax(0,1fr)!important;padding:8px!important}
+  #collab, #folder-sec, aside>.sec:not(#collab):not(#folder-sec), aside>.feedwrap{
+    grid-column:1!important;grid-row:auto!important
+  }
+}
+
 /* Recalculate the WebGL drawing size after applying the larger view */
 window.dispatchEvent(new Event("resize"));
 </script>
