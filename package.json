@@ -9,7 +9,7 @@
   "scripts": {
     "start": "node server/index.js",
     "desktop": "electron .",
-    "desktop:build": "electron-builder --win nsis"
+    "desktop:build": "electron-builder --win nsis --publish never"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
