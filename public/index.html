@@ -324,8 +324,8 @@ input,select,textarea{min-width:0}
   <div id="view">
     <div id="loading">BOOTING STATION…</div>
     <div id="err"></div><div class="toast" id="toast"></div>
-    <div class="hud tl"><div>PRIME STATION · UNDERGROUND DUNGEON</div><div id="hud-status">DUNGEON SYSTEMS ONLINE</div></div>
-    <div class="hud bl">Drag to rotate · scroll / pinch to zoom · select an agent chamber to inspect its work</div>
+    <div class="hud tl"><div>LOW EARTH ORBIT · ALT 408 KM</div><div id="hud-status">ALL SYSTEMS NOMINAL</div></div>
+    <div class="hud bl">Drag to rotate · scroll / pinch to zoom · tap a crew member · click your 🚀 ship to fly to your planet</div>
     <div class="ctrls"><button id="b-rot" class="on">Auto-rotate</button><button id="b-reset">Reset view</button></div>
   </div>
   <aside>
@@ -448,24 +448,36 @@ function canvasTex(w,h,draw){const c=document.createElement("canvas");c.width=w;
 const rnd=(a,b)=>a+Math.random()*(b-a);
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 
-/* =========================== UNDERGROUND DUNGEON ENVIRONMENT =========================== */
-scene.background=new THREE.Color(0x090807);
-const caveRockTex=canvasTex(1024,1024,(g,w,h)=>{
- g.fillStyle="#39332b";g.fillRect(0,0,w,h);
- for(let i=0;i<22000;i++){const v=35+Math.random()*65;g.fillStyle=`rgba(${v},${v*.88},${v*.7},${Math.random()*.22})`;g.beginPath();g.arc(Math.random()*w,Math.random()*h,rnd(1,9),0,Math.PI*2);g.fill();}
- for(let i=0;i<90;i++){g.strokeStyle="rgba(10,8,7,.18)";g.lineWidth=rnd(1,5);g.beginPath();let x=Math.random()*w,y=Math.random()*h;g.moveTo(x,y);for(let k=0;k<5;k++){x+=rnd(-35,35);y+=rnd(-35,35);g.lineTo(x,y);}g.stroke();}
+/* =========================== SPACE =========================== */
+{ // stars
+  const n=4000,pos=new Float32Array(n*3),col=new Float32Array(n*3);
+  for(let i=0;i<n;i++){const v=new THREE.Vector3().randomDirection().multiplyScalar(rnd(400,900));pos.set([v.x,v.y,v.z],i*3);const t=Math.random();col.set([.8+.2*t,.85+.1*t,1],i*3);}
+  const g=new THREE.BufferGeometry();g.setAttribute("position",new THREE.BufferAttribute(pos,3));g.setAttribute("color",new THREE.BufferAttribute(col,3));
+  scene.add(new THREE.Points(g,new THREE.PointsMaterial({size:1.6,sizeAttenuation:false,vertexColors:true})));
+}
+// Earth (procedural)
+function noiseBlobs(g,w,h,count,colorFn,rMin,rMax){for(let i=0;i<count;i++){const x=Math.random()*w,y=h*.12+Math.random()*h*.76,r=rnd(rMin,rMax);const gr=g.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,colorFn(1));gr.addColorStop(1,colorFn(0));g.fillStyle=gr;g.beginPath();g.arc(x,y,r,0,7);g.fill();
+  if(x<r){g.beginPath();g.arc(x+w,y,r,0,7);g.fill();} if(x>w-r){g.beginPath();g.arc(x-w,y,r,0,7);g.fill();}}}
+const earthTex=canvasTex(2048,1024,(g,w,h)=>{
+  const sea=g.createLinearGradient(0,0,0,h);sea.addColorStop(0,"#0b2a5c");sea.addColorStop(.5,"#0f4a9a");sea.addColorStop(1,"#0b2a5c");g.fillStyle=sea;g.fillRect(0,0,w,h);
+  // continents: clustered blobs
+  for(let c=0;c<7;c++){const cx=Math.random()*w,cy=h*.25+Math.random()*h*.5;for(let i=0;i<70;i++){const x=cx+rnd(-1,1)*rnd(40,260),y=cy+rnd(-1,1)*rnd(30,160),r=rnd(18,70);
+    const shade=Math.random();g.fillStyle=shade<.45?"#3f6b2f":shade<.8?"#5a7d3a":"#8a7a4f";g.globalAlpha=.85;g.beginPath();g.arc(x,y,r,0,7);g.fill();}}
+  g.globalAlpha=1;g.fillStyle="#eef4ff";g.fillRect(0,0,w,h*.05);g.fillRect(0,h*.95,w,h*.05);
 });
-caveRockTex.wrapS=caveRockTex.wrapT=THREE.RepeatWrapping;caveRockTex.repeat.set(5,3);
-const caveCeiling=new THREE.Mesh(new THREE.SphereGeometry(1,48,32),new THREE.MeshStandardMaterial({map:caveRockTex,color:0x62503d,roughness:1,side:THREE.BackSide}));
-caveCeiling.scale.set(78,24,46);caveCeiling.position.set(0,8,0);scene.add(caveCeiling);
-const caveBack=new THREE.Mesh(new THREE.SphereGeometry(1,48,32),new THREE.MeshStandardMaterial({map:caveRockTex,color:0x332a22,roughness:1,side:THREE.BackSide}));
-caveBack.scale.set(88,34,58);scene.add(caveBack);
-function stalactite(x,z,h,r){const m=mesh(new THREE.ConeGeometry(r,h,7),std(0x554536,{map:caveRockTex,roughness:1}),x,11-h/2,z,scene,false);m.rotation.z=rnd(-.12,.12);}
-for(let i=0;i<74;i++){const x=rnd(-43,43),z=rnd(-22,22);if(!(Math.abs(x)<37&&Math.abs(z)<13))stalactite(x,z,rnd(1.1,4.8),rnd(.25,1.1));}
-const caveGlow=new THREE.PointLight(0xff9b48,1.7,42,1.5);caveGlow.position.set(0,7,0);scene.add(caveGlow);
+const cloudTex=canvasTex(2048,1024,(g,w,h)=>{g.clearRect(0,0,w,h);noiseBlobs(g,w,h,520,a=>`rgba(255,255,255,${a*.55})`,20,90);});
+const earth=new THREE.Group();earth.position.set(10,-128,-70);scene.add(earth);
+earth.add(new THREE.Mesh(new THREE.SphereGeometry(110,128,128),new THREE.MeshStandardMaterial({map:earthTex,color:0x5c6470,roughness:.95,metalness:0})));
+const clouds=new THREE.Mesh(new THREE.SphereGeometry(110.8,128,128),new THREE.MeshStandardMaterial({map:cloudTex,transparent:true,opacity:.45,depthWrite:false,roughness:1}));earth.add(clouds);
+const glowTex=canvasTex(512,512,(g,w)=>{const gr=g.createRadialGradient(w/2,w/2,w*.33,w/2,w/2,w/2);gr.addColorStop(0,"rgba(110,180,255,.9)");gr.addColorStop(.35,"rgba(80,150,255,.35)");gr.addColorStop(1,"rgba(40,90,255,0)");g.fillStyle=gr;g.fillRect(0,0,w,w);});
+const atmo=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));atmo.scale.set(336,336,1);atmo.material.opacity=.28;earth.add(atmo);
+// sun
+const sunTex=canvasTex(256,256,(g,w)=>{const gr=g.createRadialGradient(w/2,w/2,0,w/2,w/2,w/2);gr.addColorStop(0,"rgba(255,255,240,1)");gr.addColorStop(.15,"rgba(255,240,200,.9)");gr.addColorStop(1,"rgba(255,200,120,0)");g.fillStyle=gr;g.fillRect(0,0,w,w);});
+const sun=new THREE.Sprite(new THREE.SpriteMaterial({map:sunTex,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));sun.position.set(320,260,-420);sun.scale.set(55,55,1);sun.material.opacity=.7;scene.add(sun);
+
 /* =========================== LIGHTS =========================== */
-scene.add(new THREE.HemisphereLight(0xc99a68,0x17100b,0.72));
-const sunL=new THREE.DirectionalLight(0xffd29a,1.15);sunL.position.set(-18,28,12);sunL.castShadow=true;
+scene.add(new THREE.HemisphereLight(0x9fc4ff,0x0a0c14,0.28));
+const sunL=new THREE.DirectionalLight(0xfff2dd,1.5);sunL.position.set(18,30,10);sunL.castShadow=true;
 sunL.shadow.mapSize.set(2048,2048);Object.assign(sunL.shadow.camera,{left:-42,right:42,top:24,bottom:-24,near:1,far:140});sunL.shadow.mapSize.set(4096,2048);sunL.shadow.bias=-0.0004;sunL.shadow.camera.updateProjectionMatrix();
 scene.add(sunL);
 
@@ -473,22 +485,22 @@ scene.add(sunL);
 /* =========================== STATION =========================== */
 const DECK_R=16.2;
 const floorTex=canvasTex(1024,1024,(g,w,h)=>{
-  g.fillStyle="#40382e";g.fillRect(0,0,w,h);
+  g.fillStyle="#2a2f3c";g.fillRect(0,0,w,h);
   const n=8,s=w/n;
-  for(let i=0;i<n;i++)for(let j=0;j<n;j++){const v=48+Math.random()*18;g.fillStyle=`rgb(${v},${v*.91},${v*.78})`;g.fillRect(i*s+3,j*s+3,s-6,s-6);
+  for(let i=0;i<n;i++)for(let j=0;j<n;j++){const v=36+Math.random()*10;g.fillStyle=`rgb(${v},${v+4},${v+14})`;g.fillRect(i*s+3,j*s+3,s-6,s-6);
     g.fillStyle="#1a1d27";for(const [a,b] of [[10,10],[s-14,10],[10,s-14],[s-14,s-14]]){g.beginPath();g.arc(i*s+a+2,j*s+b+2,3,0,7);g.fill();}}
   for(let k=0;k<6000;k++){g.fillStyle=`rgba(255,255,255,${Math.random()*.03})`;g.fillRect(Math.random()*w,Math.random()*h,2,2);}
 });
 floorTex.wrapS=floorTex.wrapT=THREE.RepeatWrapping;floorTex.repeat.set(5,5);
 /* ---- building: one long station block, a hallway down the middle, rooms on both sides ---- */
 const BX=36,BZ=12,HALL=2;
-const ringMat=std(0x6a5740,{metalness:.25,roughness:.85});
-const glassMat=std(0x514333,{roughness:1,metalness:0});
+const ringMat=std(0x9aa3b8,{metalness:.9,roughness:.25});
+const glassMat=new THREE.MeshPhysicalMaterial({color:0xaee6ff,transparent:true,opacity:.14,roughness:.05,metalness:0,side:THREE.DoubleSide,depthWrite:false});
 floorTex.repeat.set(14,5);
-const slab=mesh(new THREE.BoxGeometry(BX*2+1.2,.6,BZ*2+1.2),std(0xffffff,{map:floorTex,roughness:.95,metalness:.05}),0,-.3,0);slab.castShadow=false;
-mesh(new THREE.BoxGeometry(BX*2-2,2.4,BZ*2-3),std(0x30271f,{map:caveRockTex,metalness:0,roughness:1}),0,-1.8,0,scene,false);
-mesh(new THREE.BoxGeometry(BX*2+1.6,.5,BZ*2+1.6),std(0x554431,{map:caveRockTex,metalness:.05,roughness:1}),0,-.75,0,scene,false);
-const hallFloor=mesh(new THREE.BoxGeometry(BX*2,.02,HALL*2),std(0x28231c,{map:floorTex,metalness:.05,roughness:1}),0,.01,0,scene,false);
+const slab=mesh(new THREE.BoxGeometry(BX*2+1.2,.6,BZ*2+1.2),std(0xffffff,{map:floorTex,roughness:.55,metalness:.5}),0,-.3,0);slab.castShadow=false;
+mesh(new THREE.BoxGeometry(BX*2-2,2.4,BZ*2-3),std(0x2c3240,{metalness:.8,roughness:.4}),0,-1.8,0,scene,false);
+mesh(new THREE.BoxGeometry(BX*2+1.6,.5,BZ*2+1.6),std(0x4a5266,{metalness:.85,roughness:.3}),0,-.75,0,scene,false);
+const hallFloor=mesh(new THREE.BoxGeometry(BX*2,.02,HALL*2),std(0x1a1e29,{metalness:.6,roughness:.4}),0,.01,0,scene,false);
 const hallLine=mesh(new THREE.BoxGeometry(BX*2-1,.01,.06),new THREE.MeshBasicMaterial({color:0x2c6f8a}),0,.025,0,scene,false);
 const ROOMS=[
   {id:"mkt",side:"N",x0:-36,x1:-24,door:-30},{id:"sales",side:"N",x0:-24,x1:-12,door:-18},{id:"prime",side:"N",x0:-12,x1:12,door:0,label:"COMMAND BRIDGE · PRIME",color:"#7fe3ff"},
@@ -497,20 +509,20 @@ const ROOMS=[
   {id:"cafe",side:"S",x0:0,x1:12,door:6,label:"CAFÉ & LOUNGE",color:"#ffb36b"},{id:"meme",side:"S",x0:12,x1:24,door:18},{id:"collab",side:"S",x0:24,x1:36,door:30,label:"COLLAB OFFICES",color:"#7fe3ff"}];
 ROOMS.forEach(r=>{r.sg=r.side==="N"?-1:1;r.cx=(r.x0+r.x1)/2;r.cz=r.sg*7;r.din=new THREE.Vector3(r.door,0,r.sg*3.2);r.dh=new THREE.Vector3(r.door,0,r.sg*.7);
   const ag=AGENTS.find(a=>a.id===r.id);if(ag){r.color=ag.color;r.label=`${ag.name.toUpperCase()} · ${ag.sign}`;}});
-const wallMat=std(0x66523b,{map:caveRockTex,metalness:0,roughness:1}),trimMat=std(0x8b704c,{metalness:.15,roughness:.85});
+const wallMat=std(0x6a7388,{metalness:.7,roughness:.4}),trimMat=std(0xb9c1d2,{metalness:.9,roughness:.2});
 function wallSeg(x0,z0,x1,z1,h,mat=wallMat){const len=Math.hypot(x1-x0,z1-z0);if(len<.05)return;const m=mesh(new THREE.BoxGeometry(len,h,.16),mat,(x0+x1)/2,h/2,(z0+z1)/2);m.rotation.y=-Math.atan2(z1-z0,x1-x0);
   const t=mesh(new THREE.BoxGeometry(len,.05,.22),trimMat,(x0+x1)/2,h,(z0+z1)/2,scene,false);t.rotation.y=m.rotation.y;}
 // hallway walls with door gaps
 for(const side of ["N","S"]){const sg=side==="N"?-1:1;const doors=ROOMS.filter(r=>r.side===side).map(r=>r.door).sort((a,b)=>a-b);let x=-BX;
-  for(const d of doors){wallSeg(x,sg*HALL,d-1.1,sg*HALL,2.8);x=d+1.1;}wallSeg(x,sg*HALL,BX,sg*HALL,2.8);}
+  for(const d of doors){wallSeg(x,sg*HALL,d-1.1,sg*HALL,1.3);x=d+1.1;}wallSeg(x,sg*HALL,BX,sg*HALL,1.3);}
 // partitions between rooms
-for(const r of ROOMS){if(r.x1<BX){const next=ROOMS.find(o=>o.side===r.side&&o.x0===r.x1);if(next)wallSeg(r.x1,r.sg*HALL,r.x1,r.sg*BZ,2.8);}}
+for(const r of ROOMS){if(r.x1<BX){const next=ROOMS.find(o=>o.side===r.side&&o.x0===r.x1);if(next)wallSeg(r.x1,r.sg*HALL,r.x1,r.sg*BZ,1.3);}}
 // outer shell: low wall + window glass
-for(const sg of [-1,1]){wallSeg(-BX,sg*BZ,BX,sg*BZ,3.4,std(0x51402f,{map:caveRockTex,metalness:0,roughness:1}));
+for(const sg of [-1,1]){wallSeg(-BX,sg*BZ,BX,sg*BZ,.9,std(0x4a5266,{metalness:.8,roughness:.35}));
   const g=new THREE.Mesh(new THREE.BoxGeometry(BX*2,1.3,.06),glassMat);g.position.set(0,1.55,sg*BZ);scene.add(g);
   for(let x=-BX;x<=BX;x+=6)mesh(new THREE.BoxGeometry(.14,2.2,.14),trimMat,x,1.1,sg*BZ,scene,false);
   mesh(new THREE.BoxGeometry(BX*2,.08,.2),trimMat,0,2.2,sg*BZ,scene,false);}
-for(const sx of [-1,1]){wallSeg(sx*BX,-BZ,sx*BX,BZ,3.4,std(0x51402f,{map:caveRockTex,metalness:0,roughness:1}));const g=new THREE.Mesh(new THREE.BoxGeometry(.06,1.3,BZ*2),glassMat);g.position.set(sx*BX,1.55,0);scene.add(g);}
+for(const sx of [-1,1]){wallSeg(sx*BX,-BZ,sx*BX,BZ,.9,std(0x4a5266,{metalness:.8,roughness:.35}));const g=new THREE.Mesh(new THREE.BoxGeometry(.06,1.3,BZ*2),glassMat);g.position.set(sx*BX,1.55,0);scene.add(g);}
 // per-room floor tint, door threshold glow, room light, label
 function labelSprite(text,color,w=6,h=1.1){const t=canvasTex(1024,190,(g,W,H)=>{g.fillStyle="rgba(5,8,14,.78)";g.fillRect(0,0,W,H);g.strokeStyle=color;g.lineWidth=7;g.strokeRect(6,6,W-12,H-12);
   g.fillStyle="#fff";g.font="900 72px Orbitron, Arial";g.textAlign="center";g.textBaseline="middle";g.fillText(text,W/2,H/2+4);});
@@ -522,15 +534,24 @@ ROOMS.forEach(r=>{const col=new THREE.Color(r.color||"#7fe3ff");
   if(!AGENTS.find(a=>a.id===r.id)){const L=new THREE.PointLight(col,2.2,14,1.6);L.position.set(r.cx,3.2,r.cz);scene.add(L);}});
 function roomAt(v){if(Math.abs(v.z)<HALL)return null;const side=v.z<0?"N":"S";return ROOMS.find(r=>r.side===side&&v.x>=r.x0&&v.x<r.x1)||null;}
 const ROOM=Object.fromEntries(ROOMS.map(r=>[r.id,r]));
-// Warm torch sconces replace exterior solar hardware.
-for(let x=-34;x<=34;x+=4){const torch=new THREE.Group();torch.position.set(x,2.4,-11.5);scene.add(torch);mesh(new THREE.BoxGeometry(.12,.65,.12),std(0x4b3827,{roughness:1}),0,0,0,torch,false);const flame=new THREE.Mesh(new THREE.SphereGeometry(.13,10,8),new THREE.MeshBasicMaterial({color:0xffa34d}));flame.position.y=.38;torch.add(flame);const light=new THREE.PointLight(0xff963d,.65,8,2);light.position.y=.5;torch.add(light);}
+// solar arrays + trusses
+const panelTex=canvasTex(512,256,(g,w,h)=>{g.fillStyle="#0b1a3a";g.fillRect(0,0,w,h);g.strokeStyle="#5f7fb8";g.lineWidth=2;for(let x=0;x<=w;x+=32){g.beginPath();g.moveTo(x,0);g.lineTo(x,h);g.stroke();}for(let y=0;y<=h;y+=32){g.beginPath();g.moveTo(0,y);g.lineTo(w,y);g.stroke();}
+  const gr=g.createLinearGradient(0,0,w,h);gr.addColorStop(0,"rgba(120,170,255,.25)");gr.addColorStop(1,"rgba(0,0,0,0)");g.fillStyle=gr;g.fillRect(0,0,w,h);});
+const panelMat=std(0xffffff,{map:panelTex,metalness:.6,roughness:.25});
+for(const ang of [0,Math.PI]){const g=new THREE.Group();g.position.set(Math.cos(ang)*(BX+.8),-0.6,0);g.rotation.y=-ang;scene.add(g);
+  mesh(new THREE.BoxGeometry(26,0.35,0.35),ringMat,13,0,0,g);
+  for(const z of [-3.2,3.2]){const p=mesh(new THREE.BoxGeometry(22,0.08,5.2),panelMat,15,0,z,g);p.rotation.x=0.12*Math.sign(z);}}
+// antenna mast & dish (back)
+mesh(new THREE.CylinderGeometry(.12,.12,7,8),ringMat,0,-1,-BZ-1.5).rotation.x=Math.PI/2.4;
+const dish=mesh(new THREE.SphereGeometry(1.8,32,16,0,Math.PI*2,0,Math.PI/3.2),std(0xdfe5f0,{metalness:.6,roughness:.3,side:THREE.DoubleSide}),0,1.5,-BZ-4.5);dish.rotation.x=-1.1;
+
 function plant(x,z,s=1,parent=scene){const p=new THREE.Group();p.position.set(x,0,z);p.scale.setScalar(s);parent.add(p);
   mesh(new THREE.CylinderGeometry(.22,.17,.42,16),std(0xdfe3ea,{roughness:.4}),0,.21,0,p);
   const lm=std(0x2f8f4b,{roughness:.8});for(let i=0;i<7;i++){const l=mesh(new THREE.IcosahedronGeometry(rnd(.16,.26),0),lm,rnd(-.18,.18),rnd(.55,.95),rnd(-.18,.18),p);l.rotation.set(rnd(0,3),rnd(0,3),0);}return p;}
 /* ---------- Prime's command room ---------- */
 const PLAT_Y=0;
-const dais=mesh(new THREE.CylinderGeometry(3,3,.04,64),std(0x473729,{metalness:.12,roughness:.9,emissive:0x6b3510,emissiveIntensity:.22}),0,.02,-9.6,scene,false);
-const platRing=mesh(new THREE.TorusGeometry(3,.035,8,96),new THREE.MeshBasicMaterial({color:0xffb65e}),0,.04,-9.6,scene,false);platRing.rotation.x=Math.PI/2;
+const dais=mesh(new THREE.CylinderGeometry(3,3,.04,64),std(0x1b2232,{metalness:.6,roughness:.25,emissive:0x0a2a36,emissiveIntensity:.5}),0,.02,-9.6,scene,false);
+const platRing=mesh(new THREE.TorusGeometry(3,.035,8,96),new THREE.MeshBasicMaterial({color:0x4aa8c4}),0,.04,-9.6,scene,false);platRing.rotation.x=Math.PI/2;
 // console
 const consoleG=new THREE.Group();consoleG.position.set(0,0,-9.1);scene.add(consoleG);
 mesh(new THREE.BoxGeometry(2.6,0.8,0.55),std(0x5b6478,{metalness:.7,roughness:.3}),0,0.4,0,consoleG);
@@ -565,8 +586,8 @@ function updateFolderProp(){const n=reports.filter(r=>r.status==="new").length;f
 /* ---------- Holo table (behind Prime) ---------- */
 const HOLO=new THREE.Vector3(-7,0,-6.6);
 mesh(new THREE.CylinderGeometry(.9,1.05,.9,32),std(0x434b5e,{metalness:.8,roughness:.3}),HOLO.x,.45,HOLO.z);
-const beam=new THREE.Mesh(new THREE.CylinderGeometry(1.1,.75,1.4,32,1,true),new THREE.MeshBasicMaterial({color:0xffb65e,transparent:true,opacity:.12,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending}));beam.position.set(HOLO.x,1.6,HOLO.z);scene.add(beam);
-const holoGlobe=new THREE.Mesh(new THREE.IcosahedronGeometry(.45,2),new THREE.MeshBasicMaterial({color:0xffd28a,wireframe:true,transparent:true,opacity:.7}));holoGlobe.position.set(HOLO.x,1.75,HOLO.z);scene.add(holoGlobe);
+const beam=new THREE.Mesh(new THREE.CylinderGeometry(1.1,.75,1.4,32,1,true),new THREE.MeshBasicMaterial({color:0x7fe3ff,transparent:true,opacity:.12,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending}));beam.position.set(HOLO.x,1.6,HOLO.z);scene.add(beam);
+const holoGlobe=new THREE.Mesh(new THREE.IcosahedronGeometry(.45,2),new THREE.MeshBasicMaterial({color:0x7fe3ff,wireframe:true,transparent:true,opacity:.7}));holoGlobe.position.set(HOLO.x,1.75,HOLO.z);scene.add(holoGlobe);
 const holoDots=AGENTS.map((a,i)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(.07,12,12),new THREE.MeshBasicMaterial({color:a.color}));scene.add(m);return m;});
 
 
