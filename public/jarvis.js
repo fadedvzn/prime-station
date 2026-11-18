@@ -27,7 +27,7 @@ const boot=()=>{
  #prime-jarvis .j-bottom{display:flex;align-items:center;gap:9px;margin-top:9px}
  #prime-jarvis .j-talk{flex:1;min-height:42px;border:1px solid #58caff;border-radius:11px;background:linear-gradient(100deg,#123e59,#0e2b43);color:#c9f4ff;font:800 10px Orbitron,Inter,sans-serif;letter-spacing:1.1px;cursor:pointer;touch-action:none;user-select:none}
  #prime-jarvis .j-talk.listening{background:linear-gradient(100deg,#6b2635,#351b2b);border-color:#ff8295;color:#ffe3e8;box-shadow:0 0 20px #ff829533}
- #prime-prime .j-talk:focus-visible,#prime-jarvis button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+ #prime-jarvis .j-talk:focus-visible,#prime-jarvis button:focus-visible{outline:2px solid #fff;outline-offset:2px}
  #prime-jarvis .j-speak{border:1px solid #2c4965;background:#0b1929;color:#9fc9e5;border-radius:10px;padding:9px 10px;font-size:10px;cursor:pointer}
  #prime-jarvis .j-foot{font-size:9px;color:#7896b1;margin-top:8px;text-align:center}
  #prime-jarvis.collapsed .j-body{display:none}
@@ -35,12 +35,12 @@ const boot=()=>{
  `;
  document.head.appendChild(style);
  const root=document.createElement('section');root.id='prime-jarvis';
- root.innerHTML=`<div class="j-panel"><div class="j-head"><div class="j-orb">P</div><div><div class="j-title">JARVIS</div><div class="j-sub">PRIME STATION INTELLIGENCE</div></div><div class="j-ready" id="j-status">READY</div><button class="j-min" id="j-min" aria-label="Minimize JARVIS">−</button></div><div class="j-body"><div class="j-log" id="j-log" aria-live="polite"><div class="j-msg assistant">Systems ready. I'm JARVIS, your Prime Station assistant. Type a request or hold the microphone button while you speak.</div></div><form id="j-form"><div class="j-controls"><input class="j-input" id="j-input" maxlength="4000" autocomplete="off" placeholder="Ask JARVIS anything…" aria-label="Message JARVIS"><button class="j-send" id="j-send" aria-label="Send message">➤</button></div></form><div class="j-bottom"><button class="j-talk" id="j-talk" type="button">▣ &nbsp; HOLD TO TALK</button><button class="j-speak" id="j-speak" type="button">VOICE ON</button></div><div class="j-foot">PUSH TO TALK • TEXT CHAT • OWNER AUTHENTICATION REQUIRED</div></div></div>`;
+ root.innerHTML=`<div class="j-panel"><div class="j-head"><div class="j-orb">P</div><div><div class="j-title">JARVIS</div><div class="j-sub">PRIME STATION INTELLIGENCE</div></div><div class="j-ready" id="j-status">READY</div><button class="j-min" id="j-min" aria-label="Minimize JARVIS">−</button></div><div class="j-body"><div class="j-log" id="j-log" aria-live="polite"><div class="j-msg assistant">Systems ready. I'm JARVIS, your Prime Station assistant. Type a request or hold the microphone button while you speak.</div></div><form id="j-form"><div class="j-controls"><input class="j-input" id="j-input" maxlength="4000" autocomplete="off" placeholder="Ask JARVIS anything…" aria-label="Message JARVIS"><button class="j-send" id="j-send" aria-label="Send message">➤</button></div></form><div class="j-bottom"><button class="j-talk" id="j-talk" type="button">▣ &nbsp; HOLD TO TALK</button><button class="j-speak" id="j-speak" type="button">WAKE LISTENING: OFF</button></div><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px"><label for="j-output" style="font-size:10px;color:#9db6cc">RESPONSE MODE</label><select id="j-output" style="background:#081321;color:#d9efff;border:1px solid #2b4561;border-radius:8px;padding:7px;font-size:10px"><option value="both">Text + spoken</option><option value="text">Text only</option><option value="voice">Spoken only</option></select></div><div class="j-foot" id="j-foot">MIC OFF • SAY “HEY JARVIS” • KEEP THIS TAB OPEN FOR WAKE MODE</div></div></div>`;
  document.body.appendChild(root);
  const $=id=>document.getElementById(id),log=$('j-log'),input=$('j-input'),sendBtn=$('j-send'),talk=$('j-talk'),status=$('j-status');
- let busy=false,voiceOn=true,recognition=null,voiceTranscript='';
+ let busy=false,voiceOn=true,recognition=null,voiceTranscript='',wakeEnabled=false,outputMode='both',holdActive=false;
  const add=(kind,text)=>{const el=document.createElement('div');el.className='j-msg '+kind;el.textContent=text;log.appendChild(el);log.scrollTop=log.scrollHeight;};
- const speak=text=>{if(!voiceOn||!('speechSynthesis'in window))return;window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text.slice(0,1800));u.rate=1.02;u.pitch=1;window.speechSynthesis.speak(u);};
+ const speak=text=>{if(!['both','voice'].includes(outputMode)||!('speechSynthesis'in window))return;window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text.slice(0,1800));u.rate=1.02;u.pitch=1;window.speechSynthesis.speak(u);};
  async function send(text){
   const prompt=String(text||'').trim();if(!prompt||busy)return;
   busy=true;sendBtn.disabled=true;status.textContent='THINKING';add('user',prompt);
@@ -49,22 +49,23 @@ const boot=()=>{
    const data=await res.json().catch(()=>({}));
    if(!res.ok)throw new Error(data.error||(res.status===401?'Please sign in as the Prime Station owner first.':'JARVIS request failed.'));
    const answer=data.text||'I received your request, but there was no response.';
-   add('assistant',answer);speak(answer);
+   if(outputMode!=='voice')add('assistant',answer);speak(answer);
   }catch(e){add('system',e.message||'Could not reach JARVIS.');}
   finally{busy=false;sendBtn.disabled=false;status.textContent='READY';input.focus();}
  }
  $('j-form').addEventListener('submit',e=>{e.preventDefault();const v=input.value;input.value='';send(v);});
  $('j-min').addEventListener('click',()=>{root.classList.toggle('collapsed');$('j-min').textContent=root.classList.contains('collapsed')?'+':'−';});
- $('j-speak').addEventListener('click',()=>{voiceOn=!voiceOn;$('j-speak').textContent=voiceOn?'VOICE ON':'VOICE OFF';if(!voiceOn&&'speechSynthesis'in window)window.speechSynthesis.cancel();});
+ $('j-output').addEventListener('change',e=>{outputMode=e.target.value;if(outputMode==='text'&&'speechSynthesis'in window)window.speechSynthesis.cancel();});
+ $('j-speak').addEventListener('click',()=>{if(!recognition){add('system','Wake-word listening is not supported by this browser.');return;}wakeEnabled=!wakeEnabled;$('j-speak').textContent=wakeEnabled?'WAKE LISTENING: ON':'WAKE LISTENING: OFF';$('j-speak').classList.toggle('listening',wakeEnabled);$('j-speak').setAttribute('aria-pressed',String(wakeEnabled));$('j-foot').textContent=wakeEnabled?'MIC ACTIVE • SAY “HEY JARVIS” • THIS TAB MUST STAY OPEN':'MIC OFF • SAY “HEY JARVIS” • KEEP THIS TAB OPEN FOR WAKE MODE';if(wakeEnabled){try{recognition.start();}catch(e){add('system','Allow microphone access, then try again.');}}else{try{recognition.stop();}catch(e){}}});
  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
  if(SR){
-  recognition=new SR();recognition.lang='en-US';recognition.continuous=false;recognition.interimResults=false;
-  recognition.onstart=()=>{voiceTranscript='';talk.classList.add('listening');talk.textContent='● LISTENING — RELEASE TO SEND';status.textContent='LISTENING';};
-  recognition.onresult=e=>{voiceTranscript=Array.from(e.results).map(r=>r[0].transcript).join(' ').trim();};
-  recognition.onerror=e=>{if(e.error!=='no-speech'&&e.error!=='aborted')add('system','Microphone: '+e.error+'. Check browser microphone permission.');};
-  recognition.onend=()=>{talk.classList.remove('listening');talk.textContent='▣  HOLD TO TALK';status.textContent='READY';if(voiceTranscript){input.value=voiceTranscript;const v=voiceTranscript;voiceTranscript='';send(v);}};
-  const start=()=>{if(busy||talk.classList.contains('listening'))return;try{recognition.start();}catch(e){}};
-  const stop=()=>{if(talk.classList.contains('listening')){try{recognition.stop();}catch(e){}}};
+  recognition=new SR();recognition.lang='en-US';recognition.continuous=true;recognition.interimResults=false;
+  recognition.onstart=()=>{if(!wakeEnabled){voiceTranscript='';holdActive=true;talk.classList.add('listening');talk.textContent='● LISTENING — RELEASE TO SEND';status.textContent='LISTENING';}else{status.textContent='WAKE LISTENING';}};
+  recognition.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++){if(!e.results[i].isFinal)continue;const transcript=String(e.results[i][0]?.transcript||'').trim();if(!transcript)continue;if(wakeEnabled&&!holdActive){const low=transcript.toLowerCase(),idx=low.indexOf('hey jarvis');if(idx>=0){const cmd=transcript.slice(idx+10).trim();if(cmd)send(cmd);else add('system','I’m listening. What would you like me to do?');}}else if(holdActive){voiceTranscript+=(voiceTranscript?' ':'')+transcript;}}};
+  recognition.onerror=e=>{if(e.error==='not-allowed'||e.error==='service-not-allowed'){wakeEnabled=false;$('j-speak').textContent='WAKE LISTENING: OFF';$('j-speak').classList.remove('listening');$('j-foot').textContent='MIC BLOCKED • ENABLE MICROPHONE PERMISSION IN EDGE';status.textContent='MIC BLOCKED';}else if(e.error!=='no-speech'&&e.error!=='aborted')add('system','Microphone: '+e.error+'. Check browser microphone permission.');};
+  recognition.onend=()=>{talk.classList.remove('listening');talk.textContent='▣  HOLD TO TALK';if(holdActive){holdActive=false;if(voiceTranscript){input.value=voiceTranscript;const v=voiceTranscript;voiceTranscript='';send(v);}}if(wakeEnabled){status.textContent='WAKE LISTENING';setTimeout(()=>{if(wakeEnabled)try{recognition.start();}catch(e){}},650);}else status.textContent='READY';};
+  const start=()=>{if(busy||wakeEnabled||talk.classList.contains('listening'))return;voiceTranscript='';holdActive=true;try{recognition.start();}catch(e){holdActive=false;add('system','Microphone is busy or unavailable. Turn off wake listening first.');}};
+  const stop=()=>{if(holdActive){try{recognition.stop();}catch(e){}}};
   talk.addEventListener('pointerdown',e=>{e.preventDefault();talk.setPointerCapture?.(e.pointerId);start();});
   talk.addEventListener('pointerup',e=>{e.preventDefault();stop();});
   talk.addEventListener('pointercancel',stop);
