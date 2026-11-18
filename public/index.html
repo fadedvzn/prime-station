@@ -1808,8 +1808,7 @@ boot();
   }
 }
 </style>
-<script>
-
+<style>
 /* Prime Station workspace layout: large 3D viewport + dedicated work columns */
 main{
   display:flex!important;
@@ -1861,7 +1860,7 @@ aside .sec{min-width:0!important;margin:0!important;height:100%}
 }
 
 /* Recalculate the WebGL drawing size after applying the larger view */
-window.dispatchEvent(new Event("resize"));
-</script>
+</style>
+<script>window.dispatchEvent(new Event("resize"));</script>
 </body>
 </html>
