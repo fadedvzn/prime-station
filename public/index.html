@@ -494,7 +494,7 @@ const ROOMS=[
   {id:"mkt",side:"N",x0:-36,x1:-24,door:-30},{id:"sales",side:"N",x0:-24,x1:-12,door:-18},{id:"prime",side:"N",x0:-12,x1:12,door:0,label:"COMMAND BRIDGE · PRIME",color:"#7fe3ff"},
   {id:"btc",side:"N",x0:12,x1:24,door:18},{id:"clip",side:"N",x0:24,x1:36,door:30},
   {id:"rbx",side:"S",x0:-36,x1:-24,door:-30},{id:"meetA",side:"S",x0:-24,x1:0,door:-12,label:"MEETING ROOM",color:"#7fb8ff"},
-  {id:"cafe",side:"S",x0:0,x1:24,door:12,label:"CAFÉ & LOUNGE",color:"#ffb36b"},{id:"collab",side:"S",x0:24,x1:36,door:30,label:"COLLAB OFFICES",color:"#7fe3ff"}];
+  {id:"cafe",side:"S",x0:0,x1:12,door:6,label:"CAFÉ & LOUNGE",color:"#ffb36b"},{id:"meme",side:"S",x0:12,x1:24,door:18},{id:"collab",side:"S",x0:24,x1:36,door:30,label:"COLLAB OFFICES",color:"#7fe3ff"}];
 ROOMS.forEach(r=>{r.sg=r.side==="N"?-1:1;r.cx=(r.x0+r.x1)/2;r.cz=r.sg*7;r.din=new THREE.Vector3(r.door,0,r.sg*3.2);r.dh=new THREE.Vector3(r.door,0,r.sg*.7);
   const ag=AGENTS.find(a=>a.id===r.id);if(ag){r.color=ag.color;r.label=`${ag.name.toUpperCase()} · ${ag.sign}`;}});
 const wallMat=std(0x66523b,{map:caveRockTex,metalness:0,roughness:1}),trimMat=std(0x8b704c,{metalness:.15,roughness:.85});
