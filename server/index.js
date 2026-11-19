@@ -59,6 +59,7 @@ const agencyRoster=()=>{try{return JSON.parse(fs.readFileSync(path.join(root,'ag
 const agencyAgentMap={ari:'mkt',maya:'mkt',jules:'clip',leo:'sales',nia:'sales',evan:'mkt',skye:'sales',quinn:'btc',rory:'mkt',sage:'mkt'};
 const agencyAgentNames={mkt:'Marketing & Growth',sales:'Sales & Acquisition',btc:'Analytics & Research',meme:'Market Intelligence',clip:'Creative Studio',rbx:'Web & Automation'};
 app.get('/agency',(q,s)=>s.sendFile(path.join(root,'public','kaventra.html')));
+app.get('/api/agency/roster',auth,(q,s)=>{const roster=agencyRoster();s.json({agency:roster.agency||'Kaventra AI',departments:roster.departments||[],agents:(roster.agents||[]).map(({id,name,title,department,mission})=>({id,name,title,department,mission}))});});
 app.get('/api/agency/overview',auth,(q,s)=>{
  const clients=db.prepare('SELECT * FROM agency_clients ORDER BY created_at DESC').all();
  const rows=db.prepare('SELECT * FROM tasks ORDER BY created_at DESC LIMIT 100').all();
