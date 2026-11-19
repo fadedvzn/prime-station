@@ -1,0 +1,250 @@
+{
+  "agency": "Kaventra AI",
+  "tagline": "Intelligence that moves business forward.",
+  "autonomy": "approval_required_for_external_or_irreversible_actions",
+  "departments": [
+    {
+      "id": "marketing",
+      "name": "Marketing & Growth",
+      "lead": "Maya",
+      "services": [
+        "brand strategy",
+        "social media",
+        "SEO",
+        "paid advertising planning",
+        "email marketing",
+        "campaign analytics"
+      ]
+    },
+    {
+      "id": "creative",
+      "name": "Creative Studio",
+      "lead": "Jules",
+      "services": [
+        "short-form video",
+        "creative direction",
+        "graphic design briefs",
+        "copywriting",
+        "brand identity"
+      ]
+    },
+    {
+      "id": "digital",
+      "name": "Web & Digital",
+      "lead": "Evan",
+      "services": [
+        "websites",
+        "landing pages",
+        "ecommerce planning",
+        "conversion optimization"
+      ]
+    },
+    {
+      "id": "automation",
+      "name": "AI & Automation",
+      "lead": "Evan",
+      "services": [
+        "AI assistants",
+        "CRM workflows",
+        "lead capture",
+        "appointment workflows",
+        "process automation"
+      ]
+    },
+    {
+      "id": "sales",
+      "name": "Sales & Client Acquisition",
+      "lead": "Nia",
+      "services": [
+        "prospect research",
+        "qualification",
+        "proposal drafts",
+        "follow-up plans"
+      ]
+    },
+    {
+      "id": "client-success",
+      "name": "Client Success & Operations",
+      "lead": "Skye",
+      "services": [
+        "onboarding",
+        "project tracking",
+        "support drafts",
+        "reporting",
+        "quality assurance"
+      ]
+    }
+  ],
+  "agents": [
+    {
+      "id": "ari",
+      "name": "Ari",
+      "title": "AI Chief of Staff",
+      "department": "Executive",
+      "permissions": {
+        "research": true,
+        "draft": true,
+        "internal_tasks": true,
+        "external_send": false,
+        "publish": false,
+        "ad_launch": false,
+        "spend": false,
+        "sign_contracts": false,
+        "production_changes": false
+      }
+    },
+    {
+      "id": "maya",
+      "name": "Maya",
+      "title": "Marketing Director",
+      "department": "Marketing & Growth",
+      "permissions": {
+        "research": true,
+        "draft": true,
+        "internal_tasks": true,
+        "external_send": false,
+        "publish": false,
+        "ad_launch": false,
+        "spend": false,
+        "sign_contracts": false,
+        "production_changes": false
+      }
+    },
+    {
+      "id": "jules",
+      "name": "Jules",
+      "title": "Creative Director",
+      "department": "Creative Studio",
+      "permissions": {
+        "research": true,
+        "draft": true,
+        "internal_tasks": true,
+        "external_send": false,
+        "publish": false,
+        "ad_launch": false,
+        "spend": false,
+        "sign_contracts": false,
+        "production_changes": false
+      }
+    },
+    {
+      "id": "leo",
+      "name": "Leo",
+      "title": "Market Research & Lead Intelligence",
+      "department": "Sales",
+      "permissions": {
+        "research": true,
+        "draft": true,
+        "internal_tasks": true,
+        "external_send": false,
+        "publish": false,
+        "ad_launch": false,
+        "spend": false,
+        "sign_contracts": false,
+        "production_changes": false
+      }
+    },
+    {
+      "id": "nia",
+      "name": "Nia",
+      "title": "Sales & Partnerships",
+      "department": "Sales",
+      "permissions": {
+        "research": true,
+        "draft": true,
+        "internal_tasks": true,
+        "external_send": false,
+        "publish": false,
+        "ad_launch": false,
+        "spend": false,
+        "sign_contracts": false,
+        "production_changes": false
+      }
+    },
+    {
+      "id": "evan",
+      "name": "Evan",
+      "title": "Web & Automation Lead",
+      "department": "Digital & Automation",
+      "permissions": {
+        "research": true,
+        "draft": true,
+        "internal_tasks": true,
+        "external_send": false,
+        "publish": false,
+        "ad_launch": false,
+        "spend": false,
+        "sign_contracts": false,
+        "production_changes": false
+      }
+    },
+    {
+      "id": "skye",
+      "name": "Skye",
+      "title": "Client Success Manager",
+      "department": "Client Success",
+      "permissions": {
+        "research": true,
+        "draft": true,
+        "internal_tasks": true,
+        "external_send": false,
+        "publish": false,
+        "ad_launch": false,
+        "spend": false,
+        "sign_contracts": false,
+        "production_changes": false
+      }
+    },
+    {
+      "id": "quinn",
+      "name": "Quinn",
+      "title": "Analytics & Quality Lead",
+      "department": "Analytics & QA",
+      "permissions": {
+        "research": true,
+        "draft": true,
+        "internal_tasks": true,
+        "external_send": false,
+        "publish": false,
+        "ad_launch": false,
+        "spend": false,
+        "sign_contracts": false,
+        "production_changes": false
+      }
+    },
+    {
+      "id": "rory",
+      "name": "Rory",
+      "title": "Paid Media Analyst",
+      "department": "Marketing & Growth",
+      "permissions": {
+        "research": true,
+        "draft": true,
+        "internal_tasks": true,
+        "external_send": false,
+        "publish": false,
+        "ad_launch": false,
+        "spend": false,
+        "sign_contracts": false,
+        "production_changes": false
+      }
+    },
+    {
+      "id": "sage",
+      "name": "Sage",
+      "title": "SEO & Content Strategist",
+      "department": "Marketing & Growth",
+      "permissions": {
+        "research": true,
+        "draft": true,
+        "internal_tasks": true,
+        "external_send": false,
+        "publish": false,
+        "ad_launch": false,
+        "spend": false,
+        "sign_contracts": false,
+        "production_changes": false
+      }
+    }
+  ]
+}
