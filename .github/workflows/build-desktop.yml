@@ -6,6 +6,9 @@ on:
     branches: [main]
     paths:
       - "desktop/**"
+      - "server/**"
+      - "public/**"
+      - "agents.json"
       - "package.json"
       - ".github/workflows/build-desktop.yml"
 
@@ -24,6 +27,8 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install
+      - name: Rebuild native modules for Electron
+        run: npx electron-rebuild -f -w better-sqlite3
       - name: Build Windows installer
         run: npm run desktop:build
       - name: Upload installer artifact
@@ -39,10 +44,9 @@ jobs:
           tag_name: desktop-latest
           name: Prime Station for Windows
           body: |
-            Download the Windows installer below.
+            Download the standalone Windows installer below.
 
-            Install Prime Station on Windows, then sign in or request access to the shared station.
-            This desktop app connects to the hosted Prime Station service and requires an internet connection.
+            Prime Station runs its server locally on this computer. Your data and local credentials are stored in your Windows user-data folder.
           files: release/*.exe
           fail_on_unmatched_files: true
           make_latest: true
