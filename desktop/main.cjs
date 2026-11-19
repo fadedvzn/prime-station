@@ -1,19 +1,23 @@
 /**
  * Prime Station — desktop shell.
  *
- * Runs the whole app locally: it starts the Express server as a child process
- * on a free port, waits for it to answer, then loads it in a window. No Render,
- * no hosted backend, no internet connection required.
+ * Runs the whole app locally: the Express server is loaded into this process
+ * (Electron's main process is Node), then the window points at it. No Render,
+ * no hosted backend, no child process, no internet connection required.
+ *
+ * Loading the server in-process rather than spawning it also avoids a Windows
+ * quirk: spawning a GUI-subsystem executable (which a packaged Electron app is)
+ * returns ENOENT even when the file is right there.
  *
  * Data lives in the OS user-data directory, not in the app bundle, so
  * reinstalling or updating the app does not wipe your clients or tasks.
  */
 const { app, BrowserWindow, shell, dialog, Menu } = require('electron');
-const { spawn } = require('node:child_process');
 const path = require('node:path');
 const net = require('node:net');
 const http = require('node:http');
 const fs = require('node:fs');
+const { pathToFileURL } = require('node:url');
 
 const isDev = !app.isPackaged;
 
@@ -39,7 +43,7 @@ function waitForServer(port, timeoutMs = 30000) {
         { host: '127.0.0.1', port, path: '/api/health', timeout: 2000 },
         (res) => {
           res.resume();
-          // Any HTTP answer means the process is up, even a 404 on this path.
+          // Any HTTP answer means the server is up.
           resolve();
         }
       );
@@ -57,9 +61,7 @@ function waitForServer(port, timeoutMs = 30000) {
   });
 }
 
-let serverProcess = null;
 let mainWindow = null;
-let serverLog = '';
 
 /** Where the app's own files live, packaged or not. */
 function appRoot() {
@@ -91,57 +93,32 @@ async function startServer() {
   const dataDir = path.join(app.getPath('userData'), 'data');
   fs.mkdirSync(path.join(dataDir, 'uploads'), { recursive: true });
 
-  const env = {
-    ...process.env,
-    // The packaged app has no separate Node runtime: we re-run the Electron
-    // binary as plain Node for the server child process. Without this the child
-    // starts Electron itself and no server ever listens.
-    ELECTRON_RUN_AS_NODE: '1',
-    NODE_ENV: 'production',
-    PORT: String(port),
-    DATA_DIR: dataDir,
-    UPLOAD_DIR: path.join(dataDir, 'uploads'),
-    DATABASE_PATH: path.join(dataDir, 'prime-station.sqlite'),
-    BASE_URL: 'http://127.0.0.1:' + port,
-    // Local single-user app: generate stable secrets on first run and keep them.
-    ...localSecrets(dataDir),
-    // Repo root in dev, app.asar root when packaged.
-    AGENTS_PATH: path.join(appRoot(), 'agents.json')
-  };
+  // The server reads its config from the environment at import time, so this
+  // must be set before it is loaded.
+  process.env.NODE_ENV = 'production';
+  process.env.PORT = String(port);
+  process.env.DATA_DIR = dataDir;
+  process.env.UPLOAD_DIR = path.join(dataDir, 'uploads');
+  process.env.DATABASE_PATH = path.join(dataDir, 'prime-station.sqlite');
+  process.env.BASE_URL = 'http://127.0.0.1:' + port;
+  process.env.AGENTS_PATH = path.join(appRoot(), 'agents.json');
+
+  Object.assign(process.env, localSecrets(dataDir));
 
   const entry = path.join(appRoot(), 'server', 'index.js');
   if (!fs.existsSync(entry)) {
     throw new Error('server/index.js is missing from the app bundle.');
   }
 
-  serverProcess = spawn(process.execPath, [entry], {
-    cwd: appRoot(),
-    env,
-    windowsHide: true,
-    stdio: ['ignore', 'pipe', 'pipe']
-  });
-
-  serverProcess.stderr.on('data', (d) => { serverLog += d.toString(); });
-  serverProcess.stdout.on('data', (d) => {
-    serverLog += d.toString();
-    if (isDev) process.stdout.write('[server] ' + d.toString());
-  });
-
-  serverProcess.on('exit', (code) => {
-    if (code !== 0 && mainWindow) {
-      dialog.showErrorBox(
-        'Prime Station stopped',
-        'The local server exited with code ' + code + '.\n\n' + serverLog.slice(-1500)
-      );
-    }
-  });
-
+  // Load the server into THIS process. Electron's main process is Node, so
+  // there is no child process to spawn.
   try {
-    await waitForServer(port);
+    await import(pathToFileURL(entry).href);
   } catch (err) {
-    // Surfacing the server's own output explains most first-run failures.
-    throw new Error(err.message + (serverLog ? '\n\nServer output:\n' + serverLog.slice(-1200) : ''));
+    throw new Error('The server failed to start.\n\n' + (err && err.stack ? err.stack : err));
   }
+
+  await waitForServer(port);
   return port;
 }
 
@@ -175,12 +152,7 @@ async function createWindow(port) {
 }
 
 app.on('window-all-closed', () => {
-  if (serverProcess) serverProcess.kill();
   if (process.platform !== 'darwin') app.quit();
-});
-
-app.on('before-quit', () => {
-  if (serverProcess) serverProcess.kill();
 });
 
 app.whenReady().then(async () => {
