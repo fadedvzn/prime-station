@@ -59,6 +59,7 @@ function waitForServer(port, timeoutMs = 30000) {
 
 let serverProcess = null;
 let mainWindow = null;
+let serverLog = '';
 
 /** Where the app's own files live, packaged or not. */
 function appRoot() {
@@ -92,6 +93,10 @@ async function startServer() {
 
   const env = {
     ...process.env,
+    // The packaged app has no separate Node runtime: we re-run the Electron
+    // binary as plain Node for the server child process. Without this the child
+    // starts Electron itself and no server ever listens.
+    ELECTRON_RUN_AS_NODE: '1',
     NODE_ENV: 'production',
     PORT: String(port),
     DATA_DIR: dataDir,
@@ -112,14 +117,13 @@ async function startServer() {
   serverProcess = spawn(process.execPath, [entry], {
     cwd: appRoot(),
     env,
-    // ELECTRON_RUN_AS_NODE makes the bundled Electron binary act as plain Node,
-    // so the packaged app needs no separate Node runtime.
-    windowsHide: true
+    windowsHide: true,
+    stdio: ['ignore', 'pipe', 'pipe']
   });
 
-  let stderr = '';
-  serverProcess.stderr.on('data', (d) => { stderr += d.toString(); });
+  serverProcess.stderr.on('data', (d) => { serverLog += d.toString(); });
   serverProcess.stdout.on('data', (d) => {
+    serverLog += d.toString();
     if (isDev) process.stdout.write('[server] ' + d.toString());
   });
 
@@ -127,12 +131,17 @@ async function startServer() {
     if (code !== 0 && mainWindow) {
       dialog.showErrorBox(
         'Prime Station stopped',
-        'The local server exited with code ' + code + '.\n\n' + stderr.slice(-1500)
+        'The local server exited with code ' + code + '.\n\n' + serverLog.slice(-1500)
       );
     }
   });
 
-  await waitForServer(port);
+  try {
+    await waitForServer(port);
+  } catch (err) {
+    // Surfacing the server's own output explains most first-run failures.
+    throw new Error(err.message + (serverLog ? '\n\nServer output:\n' + serverLog.slice(-1200) : ''));
+  }
   return port;
 }
 
