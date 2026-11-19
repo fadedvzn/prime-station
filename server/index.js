@@ -56,7 +56,7 @@ cron.schedule('35 4 * * *',()=>{if(!setting('automation',false))return;const sin
 /* Kaventra AI agency workspace: owner-authenticated CRM and AI task bridge. */
 db.exec("CREATE TABLE IF NOT EXISTS agency_clients (id TEXT PRIMARY KEY, name TEXT NOT NULL, contact TEXT DEFAULT '', email TEXT DEFAULT '', website TEXT DEFAULT '', service TEXT DEFAULT '', stage TEXT NOT NULL DEFAULT 'Prospect', notes TEXT DEFAULT '', created_at INTEGER NOT NULL)");
 const agencyRoster=()=>{try{return JSON.parse(fs.readFileSync(path.join(root,'agency','agents.json'),'utf8'));}catch{return {agents:[]};}};
-const agencyAgentMap={ari:'sales',maya:'mkt',jules:'clip',leo:'sales',nia:'sales',evan:'rbx',skye:'sales',quinn:'btc',rory:'mkt',sage:'mkt'};
+const agencyAgentMap={ari:'sales',maya:'mkt',jules:'clip',leo:'sales',nia:'sales',evan:'mkt',skye:'sales',quinn:'btc',rory:'mkt',sage:'mkt'};
 const agencyAgentNames={mkt:'Marketing & Growth',sales:'Sales & Acquisition',btc:'Analytics & Research',meme:'Market Intelligence',clip:'Creative Studio',rbx:'Web & Automation'};
 app.get('/agency',(q,s)=>s.sendFile(path.join(root,'public','kaventra.html')));
 app.get('/api/agency/overview',auth,(q,s)=>{
@@ -73,6 +73,7 @@ app.post('/api/agency/tasks',auth,rateLimit({windowMs:60000,limit:20,standardHea
  const queued=getTask(id);update(id,{metadata:{...queued.metadata,agencyAgentId:agentId}});
  audit('agency_task_created',{taskId:id,agentId,title});s.json({ok:true,id,status:'queued',agent:agentId});
 });
+app.get('/api/agency/artifacts',auth,(q,s)=>{const rows=db.prepare("SELECT * FROM tasks WHERE output IS NOT NULL AND output<>'' ORDER BY updated_at DESC LIMIT 200").all();const agents=agencyRoster().agents||[];const artifacts=rows.map(t=>{let meta={};try{meta=JSON.parse(t.metadata||'{}')}catch{}const a=agents.find(x=>x.id===meta.agencyAgentId)||null;return {id:t.id,title:t.title,output:t.output,status:t.status,created_at:t.created_at,updated_at:t.updated_at,agent_name:a?.name||names[t.agent]||t.agent,agent_id:a?.id||null,department:a?.department||agencyAgentNames[t.agent]||'Operations',provider:meta.provider||null,model:meta.model||null};});s.json({artifacts});});
 app.post('/api/agency/clients',auth,rateLimit({windowMs:60000,limit:30,standardHeaders:true,legacyHeaders:false}),(q,s)=>{
  const b=q.body||{},name=String(b.name||'').trim().slice(0,160),contact=String(b.contact||'').trim().slice(0,120),email=String(b.email||'').trim().slice(0,254),website=String(b.website||'').trim().slice(0,500),service=String(b.service||'').trim().slice(0,100),stage=String(b.stage||'Prospect'),notes=String(b.notes||'').trim().slice(0,3000);
  if(name.length<2)return s.status(400).json({error:'Business name is required.'});
