@@ -70,7 +70,8 @@ app.post('/api/agency/tasks',auth,rateLimit({windowMs:60000,limit:20,standardHea
  const agentId=String(q.body?.agent||''),title=String(q.body?.title||'').trim().slice(0,120),prompt=String(q.body?.prompt||'').trim().slice(0,5000),agent=agencyAgentMap[agentId];
  if(!agent||title.length<3||prompt.length<5)return s.status(400).json({error:'Choose an agency agent and provide a title and task instructions.'});
  const id=newTask(agent,'Kaventra: '+title,'KAVENTRA AI department task. Agent role: '+(agencyRoster().agents||[]).find(x=>x.id===agentId)?.title+'. Draft/research only. Do not send external messages, publish, launch ads, spend money, sign contracts, or modify production systems. Owner approval is required for external actions.\n\n'+prompt,'queued');
- const queued=getTask(id);update(id,{metadata:{...queued.metadata,agencyAgentId:agentId}});\n audit('agency_task_created',{taskId:id,agentId,title});s.json({ok:true,id,status:'queued',agent:agentId});
+ const queued=getTask(id);update(id,{metadata:{...queued.metadata,agencyAgentId:agentId}});
+ audit('agency_task_created',{taskId:id,agentId,title});s.json({ok:true,id,status:'queued',agent:agentId});
 });
 app.post('/api/agency/clients',auth,rateLimit({windowMs:60000,limit:30,standardHeaders:true,legacyHeaders:false}),(q,s)=>{
  const b=q.body||{},name=String(b.name||'').trim().slice(0,160),contact=String(b.contact||'').trim().slice(0,120),email=String(b.email||'').trim().slice(0,254),website=String(b.website||'').trim().slice(0,500),service=String(b.service||'').trim().slice(0,100),stage=String(b.stage||'Prospect'),notes=String(b.notes||'').trim().slice(0,3000);
