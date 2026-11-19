@@ -15,7 +15,6 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 function locateRoster() {
   const candidates = [
     process.env.AGENTS_PATH,
-    path.join(here, '..', 'agency', 'agents.json'),
     path.join(here, '..', 'agents.json'),
     path.join(here, 'agents.json'),
     path.join(process.cwd(), 'agents.json')
