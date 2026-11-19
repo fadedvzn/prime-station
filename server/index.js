@@ -56,7 +56,7 @@ cron.schedule('35 4 * * *',()=>{if(!setting('automation',false))return;const sin
 /* Kaventra AI agency workspace: owner-authenticated CRM and AI task bridge. */
 db.exec("CREATE TABLE IF NOT EXISTS agency_clients (id TEXT PRIMARY KEY, name TEXT NOT NULL, contact TEXT DEFAULT '', email TEXT DEFAULT '', website TEXT DEFAULT '', service TEXT DEFAULT '', stage TEXT NOT NULL DEFAULT 'Prospect', notes TEXT DEFAULT '', created_at INTEGER NOT NULL)");
 const agencyRoster=()=>{try{return JSON.parse(fs.readFileSync(path.join(root,'agency','agents.json'),'utf8'));}catch{return {agents:[]};}};
-const agencyAgentMap={ari:'sales',maya:'mkt',jules:'clip',leo:'sales',nia:'sales',evan:'mkt',skye:'sales',quinn:'btc',rory:'mkt',sage:'mkt'};
+const agencyAgentMap={marketing:'sales',maya:'mkt',jules:'clip',leo:'sales',nia:'sales',evan:'mkt',skye:'sales',quinn:'btc',rory:'mkt',sage:'mkt'};
 const agencyAgentNames={mkt:'Marketing & Growth',sales:'Sales & Acquisition',btc:'Analytics & Research',meme:'Market Intelligence',clip:'Creative Studio',rbx:'Web & Automation'};
 app.get('/agency',(q,s)=>s.sendFile(path.join(root,'public','kaventra.html')));
 app.get('/api/agency/overview',auth,(q,s)=>{
