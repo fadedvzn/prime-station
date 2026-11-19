@@ -1,167 +1,164 @@
 /**
- * Prime Station — desktop shell.
- *
- * Runs the whole app locally: the Express server is loaded into this process
- * (Electron's main process is Node), then the window points at it. No Render,
- * no hosted backend, no child process, no internet connection required.
- *
- * Loading the server in-process rather than spawning it also avoids a Windows
- * quirk: spawning a GUI-subsystem executable (which a packaged Electron app is)
- * returns ENOENT even when the file is right there.
- *
- * Data lives in the OS user-data directory, not in the app bundle, so
- * reinstalling or updating the app does not wipe your clients or tasks.
+ * Prime Station — standalone Windows desktop shell.
+ * Express runs in Electron's main process; no child process or hosted server.
  */
 const { app, BrowserWindow, shell, dialog, Menu } = require('electron');
 const path = require('node:path');
 const net = require('node:net');
 const http = require('node:http');
 const fs = require('node:fs');
+const crypto = require('node:crypto');
 const { pathToFileURL } = require('node:url');
 
-const isDev = !app.isPackaged;
-
-/** Ask the OS for a free port so two copies never collide. */
-function freePort() {
-  return new Promise((resolve, reject) => {
-    const srv = net.createServer();
-    srv.unref();
-    srv.on('error', reject);
-    srv.listen(0, '127.0.0.1', () => {
-      const { port } = srv.address();
-      srv.close(() => resolve(port));
-    });
-  });
-}
-
-/** Poll until the server answers, or give up. */
-function waitForServer(port, timeoutMs = 30000) {
-  const deadline = Date.now() + timeoutMs;
-  return new Promise((resolve, reject) => {
-    const attempt = () => {
-      const req = http.get(
-        { host: '127.0.0.1', port, path: '/api/health', timeout: 2000 },
-        (res) => {
-          res.resume();
-          // Any HTTP answer means the server is up.
-          resolve();
-        }
-      );
-      req.on('error', retry);
-      req.on('timeout', () => { req.destroy(); retry(); });
-    };
-    const retry = () => {
-      if (Date.now() > deadline) {
-        reject(new Error('The local server did not start in time.'));
-        return;
-      }
-      setTimeout(attempt, 300);
-    };
-    attempt();
-  });
-}
-
-let mainWindow = null;
-
-/** Where the app's own files live, packaged or not. */
 function appRoot() {
-  return isDev ? path.join(__dirname, '..') : app.getAppPath();
+  return app.isPackaged ? app.getAppPath() : path.join(__dirname, '..');
 }
 
-/** Owner password and secrets for a single-machine install. */
-function localSecrets(dataDir) {
-  const file = path.join(dataDir, 'local-secrets.json');
-  const crypto = require('node:crypto');
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+if (!hasSingleInstanceLock) {
+  app.quit();
+} else {
+  let mainWindow = null;
 
-  if (fs.existsSync(file)) {
-    try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { /* regenerate */ }
+  app.on('second-instance', () => {
+    if (!mainWindow) return;
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  });
+
+  function freePort() {
+    return new Promise((resolve, reject) => {
+      const server = net.createServer();
+      server.once('error', reject);
+      server.listen(0, '127.0.0.1', () => {
+        const address = server.address();
+        const port = address.port;
+        server.close((err) => err ? reject(err) : resolve(port));
+      });
+    });
   }
 
-  const secrets = {
-    OWNER_PASSWORD: crypto.randomBytes(9).toString('base64url'),
-    SESSION_SECRET: crypto.randomBytes(48).toString('hex'),
-    TOKEN_ENCRYPTION_KEY: crypto.randomBytes(32).toString('hex')
-  };
-  fs.writeFileSync(file, JSON.stringify(secrets, null, 2), { mode: 0o600 });
-  return secrets;
-}
+  function loadOrCreateSecrets(dataDir) {
+    const file = path.join(dataDir, 'local-secrets.json');
+    if (fs.existsSync(file)) {
+      try {
+        const existing = JSON.parse(fs.readFileSync(file, 'utf8'));
+        if (existing.OWNER_PASSWORD && existing.SESSION_SECRET && existing.TOKEN_ENCRYPTION_KEY) {
+          return existing;
+        }
+      } catch {
+        // Replace an unreadable or invalid secrets file below.
+      }
+    }
 
-async function startServer() {
-  const port = await freePort();
-
-  // Everything the server needs, pointed at the user's own data folder.
-  const dataDir = path.join(app.getPath('userData'), 'data');
-  fs.mkdirSync(path.join(dataDir, 'uploads'), { recursive: true });
-
-  // The server reads its config from the environment at import time, so this
-  // must be set before it is loaded.
-  process.env.NODE_ENV = 'production';
-  process.env.PORT = String(port);
-  process.env.DATA_DIR = dataDir;
-  process.env.UPLOAD_DIR = path.join(dataDir, 'uploads');
-  process.env.DATABASE_PATH = path.join(dataDir, 'prime-station.sqlite');
-  process.env.BASE_URL = 'http://127.0.0.1:' + port;
-  process.env.AGENTS_PATH = path.join(appRoot(), 'agents.json');
-
-  Object.assign(process.env, localSecrets(dataDir));
-
-  const entry = path.join(appRoot(), 'server', 'index.js');
-  if (!fs.existsSync(entry)) {
-    throw new Error('server/index.js is missing from the app bundle.');
+    const secrets = {
+      OWNER_PASSWORD: crypto.randomBytes(9).toString('base64url'),
+      SESSION_SECRET: crypto.randomBytes(48).toString('hex'),
+      TOKEN_ENCRYPTION_KEY: crypto.randomBytes(32).toString('hex')
+    };
+    fs.writeFileSync(file, JSON.stringify(secrets, null, 2), { mode: 0o600 });
+    try { fs.chmodSync(file, 0o600); } catch { /* Windows ACLs govern file access. */ }
+    return secrets;
   }
 
-  // Load the server into THIS process. Electron's main process is Node, so
-  // there is no child process to spawn.
-  try {
-    await import(pathToFileURL(entry).href);
-  } catch (err) {
-    throw new Error('The server failed to start.\n\n' + (err && err.stack ? err.stack : err));
+  function waitForServer(port, timeoutMs = 30000) {
+    const deadline = Date.now() + timeoutMs;
+    return new Promise((resolve, reject) => {
+      const attempt = () => {
+        const req = http.get({
+          host: '127.0.0.1',
+          port,
+          path: '/api/health',
+          timeout: 2000
+        }, (res) => {
+          res.resume();
+          if (res.statusCode >= 200 && res.statusCode < 500) resolve();
+          else retry();
+        });
+        req.once('error', retry);
+        req.once('timeout', () => {
+          req.destroy();
+          retry();
+        });
+      };
+      const retry = () => {
+        if (Date.now() >= deadline) {
+          reject(new Error('The local Prime Station server did not become healthy within 30 seconds.'));
+          return;
+        }
+        setTimeout(attempt, 300);
+      };
+      attempt();
+    });
   }
 
-  await waitForServer(port);
-  return port;
-}
+  async function startServer() {
+    const port = await freePort();
+    const dataDir = path.join(app.getPath('userData'), 'data');
+    const uploadDir = path.join(dataDir, 'uploads');
+    fs.mkdirSync(uploadDir, { recursive: true });
 
-async function createWindow(port) {
-  mainWindow = new BrowserWindow({
-    width: 1440,
-    height: 940,
-    minWidth: 1000,
-    minHeight: 700,
-    backgroundColor: '#070c14',
-    title: 'Prime Station',
-    autoHideMenuBar: true,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.cjs'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true
+    Object.assign(process.env, {
+      NODE_ENV: 'production',
+      PORT: String(port),
+      DATA_DIR: dataDir,
+      UPLOAD_DIR: uploadDir,
+      DATABASE_PATH: path.join(dataDir, 'prime-station.sqlite'),
+      BASE_URL: 'http://127.0.0.1:' + port,
+      AGENTS_PATH: path.join(appRoot(), 'agents.json'),
+      ...loadOrCreateSecrets(dataDir)
+    });
+
+    const serverEntry = path.join(appRoot(), 'server', 'index.js');
+    if (!fs.existsSync(serverEntry)) {
+      throw new Error('server/index.js is missing from the installed Prime Station application.');
+    }
+
+    await import(pathToFileURL(path.join(appRoot(), 'server', 'index.js')).href);
+    await waitForServer(port, 30000);
+    return port;
+  }
+
+  async function createWindow(port) {
+    mainWindow = new BrowserWindow({
+      width: 1440,
+      height: 940,
+      minWidth: 1000,
+      minHeight: 700,
+      backgroundColor: '#070c14',
+      title: 'Prime Station',
+      autoHideMenuBar: true,
+      webPreferences: {
+        preload: path.join(__dirname, 'preload.cjs'),
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true
+      }
+    });
+
+    mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+      shell.openExternal(url);
+      return { action: 'deny' };
+    });
+    mainWindow.on('closed', () => { mainWindow = null; });
+    await mainWindow.loadURL('http://127.0.0.1:' + port + '/');
+  }
+
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') app.quit();
+  });
+
+  app.whenReady().then(async () => {
+    Menu.setApplicationMenu(null);
+    try {
+      const port = await startServer();
+      await createWindow(port);
+    } catch (err) {
+      dialog.showErrorBox(
+        'Prime Station could not start',
+        err && err.stack ? err.stack : String(err)
+      );
+      app.quit();
     }
   });
-
-  // External links open in the real browser, never inside the app window.
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
-    return { action: 'deny' };
-  });
-
-  await mainWindow.loadURL('http://127.0.0.1:' + port + '/');
-  if (isDev) mainWindow.webContents.openDevTools({ mode: 'detach' });
-
-  mainWindow.on('closed', () => { mainWindow = null; });
 }
-
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
-});
-
-app.whenReady().then(async () => {
-  Menu.setApplicationMenu(null);
-  try {
-    const port = await startServer();
-    await createWindow(port);
-  } catch (err) {
-    dialog.showErrorBox('Prime Station could not start', err.message);
-    app.quit();
-  }
-});
