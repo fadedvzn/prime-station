@@ -18,25 +18,25 @@ export function chooseProvider(agent, requested = 'auto') {
 }
 
 /*
- * generate(agent, prompt, requested, agencySpecialist)
+ * generate(agent, prompt, requested, agencySpecialistOrId)
  *
- * When `agencySpecialist` is present (a Kaventra agent id, or the roster object
- * for one), that specialist IS the system prompt. The Prime Station template
- * does not run at all, so the two rosters can never blend.
- *
- * Called with no agencySpecialist, behaviour is exactly as before.
+ * The fourth argument accepts either a Kaventra specialist ID string or the
+ * existing specialist object shape. Both resolve against agents.json so the
+ * canonical name, title, department, mission and quality rules are used.
+ * The Kaventra prompt replaces (rather than mixes with) the Prime Station role.
  */
-export async function generate(agent, prompt, requested = 'auto', agencySpecialist = null) {
-  if (agencySpecialist) {
-    const id = typeof agencySpecialist === 'string'
-      ? agencySpecialist
-      : (agencySpecialist.id || agencySpecialist.agentId);
+export async function generate(agent, prompt, requested = 'auto', agencySpecialistOrId = null) {
+  if (agencySpecialistOrId) {
+    const specialistId = typeof agencySpecialistOrId === 'string'
+      ? agencySpecialistOrId
+      : (agencySpecialistOrId.id || agencySpecialistOrId.agentId);
 
-    const specialist = getAgent(id);
+    const specialist = getAgent(specialistId);
     if (!specialist) {
-      throw new Error('Unknown agent "' + id + '". Add it to agents.json before assigning work to it.');
+      throw new Error('Unknown agent "' + specialistId + '". Add it to agents.json before assigning work to it.');
     }
 
+    // buildAgencySystemPrompt reads all role and quality fields from agents.json.
     const system = buildAgencySystemPrompt(specialist.id);
     return callProvider(agent, system, prompt, requested);
   }
