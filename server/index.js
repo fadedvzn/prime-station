@@ -63,7 +63,7 @@ app.get('/api/agency/overview',auth,(q,s)=>{
  const clients=db.prepare('SELECT * FROM agency_clients ORDER BY created_at DESC').all();
  const rows=db.prepare('SELECT * FROM tasks ORDER BY created_at DESC LIMIT 100').all();
  const agents=agencyRoster().agents||[];
- const tasks=rows.map(t=>{const a=agents.find(x=>agencyAgentMap[x.id]===t.agent)||null;return {...t,agent_name:a?.name||names[t.agent]||t.agent,department:a?.department||agencyAgentNames[t.agent]||'Operations'};});
+ const tasks=rows.map(t=>{let meta={};try{meta=JSON.parse(t.metadata||'{}')}catch{}const a=agents.find(x=>x.id===meta.agencyAgentId)||null;return {...t,agent_name:a?.name||names[t.agent]||t.agent,department:a?.department||agencyAgentNames[t.agent]||'Operations'};});
  s.json({clients,tasks,approvals:tasks.filter(t=>t.status==='review'),agents});
 });
 app.post('/api/agency/tasks',auth,rateLimit({windowMs:60000,limit:20,standardHeaders:true,legacyHeaders:false}),(q,s)=>{
