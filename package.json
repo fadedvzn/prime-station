@@ -35,8 +35,14 @@
     },
     "files": [
       "desktop/**/*",
+      "server/**/*",
+      "public/**/*",
+      "agents.json",
       "package.json"
     ],
+    "extraMetadata": {
+      "main": "desktop/main.cjs"
+    },
     "win": {
       "target": [
         "nsis"
