@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   windows-installer:
-    runs-on: windows-latest
+    runs-on: windows-2022
     steps:
       - name: Check out source
         uses: actions/checkout@v4
