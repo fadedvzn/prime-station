@@ -56,15 +56,17 @@ cron.schedule('35 4 * * *',()=>{if(!setting('automation',false))return;const sin
 /* Kaventra AI agency workspace: owner-authenticated CRM and AI task bridge. */
 db.exec("CREATE TABLE IF NOT EXISTS agency_clients (id TEXT PRIMARY KEY, name TEXT NOT NULL, contact TEXT DEFAULT '', email TEXT DEFAULT '', website TEXT DEFAULT '', service TEXT DEFAULT '', stage TEXT NOT NULL DEFAULT 'Prospect', notes TEXT DEFAULT '', created_at INTEGER NOT NULL)");
 const agencyRoster=()=>{try{return JSON.parse(fs.readFileSync(path.join(root,'agency','agents.json'),'utf8'));}catch{return {agents:[]};}};
-const agencyAgentMap={marketing:'sales',maya:'mkt',jules:'clip',leo:'sales',nia:'sales',evan:'mkt',skye:'sales',quinn:'btc',rory:'mkt',sage:'mkt'};
+const agencyAgentMap={ari:'mkt',maya:'mkt',jules:'clip',leo:'sales',nia:'sales',evan:'mkt',skye:'sales',quinn:'btc',rory:'mkt',sage:'mkt'};
 const agencyAgentNames={mkt:'Marketing & Growth',sales:'Sales & Acquisition',btc:'Analytics & Research',meme:'Market Intelligence',clip:'Creative Studio',rbx:'Web & Automation'};
 app.get('/agency',(q,s)=>s.sendFile(path.join(root,'public','kaventra.html')));
 app.get('/api/agency/overview',auth,(q,s)=>{
  const clients=db.prepare('SELECT * FROM agency_clients ORDER BY created_at DESC').all();
  const rows=db.prepare('SELECT * FROM tasks ORDER BY created_at DESC LIMIT 100').all();
- const agents=agencyRoster().agents||[];
- const tasks=rows.map(t=>{let meta={};try{meta=JSON.parse(t.metadata||'{}')}catch{}const a=agents.find(x=>x.id===meta.agencyAgentId)||null;return {...t,agent_name:a?.name||names[t.agent]||t.agent,department:a?.department||agencyAgentNames[t.agent]||'Operations'};});
- s.json({clients,tasks,approvals:tasks.filter(t=>t.status==='review'),agents});
+ const roster=agencyRoster().agents||[];
+ const tasks=rows.map(t=>{let meta={};try{meta=JSON.parse(t.metadata||'{}')}catch{}const a=roster.find(x=>x.id===meta.agencyAgentId)||null;return {...t,agent_name:a?.name||names[t.agent]||t.agent,agencyAgentId:meta.agencyAgentId||null,department:a?.department||agencyAgentNames[t.agent]||'Operations'};});
+ const agents=roster.map(a=>{const mine=tasks.filter(t=>t.agencyAgentId===a.id);const active=mine.filter(t=>['queued','running'].includes(t.status)).sort((x,y)=>y.updated_at-x.updated_at)[0]||null;return {...a,activeTasks:mine.filter(t=>['queued','running'].includes(t.status)).length,reviewTasks:mine.filter(t=>t.status==='review').length,completedTasks:mine.filter(t=>t.status==='done'||t.status==='completed').length,failedTasks:mine.filter(t=>t.status==='failed').length,lastActivity:mine[0]?.updated_at||null,currentTask:active?.title||null};});
+ const activity=tasks.slice(0,12).map(t=>({id:t.id,title:t.title,agent_name:t.agent_name,status:t.status,updated_at:t.updated_at}));
+ s.json({clients,tasks,approvals:tasks.filter(t=>t.status==='review'),agents,activity});
 });
 app.post('/api/agency/tasks',auth,rateLimit({windowMs:60000,limit:20,standardHeaders:true,legacyHeaders:false}),(q,s)=>{
  const agentId=String(q.body?.agent||''),title=String(q.body?.title||'').trim().slice(0,120),prompt=String(q.body?.prompt||'').trim().slice(0,5000),agent=agencyAgentMap[agentId];
