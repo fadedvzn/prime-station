@@ -56,3 +56,14 @@ The callback URL must match exactly in the provider developer console and the ma
 - Instagram/TikTok video media must be publicly accessible over HTTPS. TikTok additionally requires domain verification and app audit for public posting.
 - Discord integration is outbound webhook messaging, not a full bot with inbound commands or moderation.
 - Roblox publishing deploys a compiled place file; Gus can generate Luau and build instructions but cannot directly edit a live Roblox Studio session.
+
+## Kaventra AI Agency Workspace
+
+Prime Station now includes an owner-authenticated agency workspace for **Kaventra AI**:
+- Open `/agency` on the deployed Prime Station host to open the dashboard.
+- Owner sign-in uses the existing `OWNER_PASSWORD` session.
+- Agency specialist roles, department routing, task queue, draft approvals, and a persistent SQLite client CRM.
+- AI tasks use Prime Station's existing worker/provider configuration; task output appears in the dashboard after the worker completes.
+- External communication, publishing, advertising spend, contracts, and production changes remain owner-controlled.
+
+The dashboard is a functional first integration, not a separate production SaaS or a fully autonomous agency. Existing provider credentials and credits are required for AI task execution. Configure at least one funded AI provider in Render. Do not expose the private repository or environment secrets.
